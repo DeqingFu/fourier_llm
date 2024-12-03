@@ -163,3 +163,5 @@ cython_debug/
 
 # SLURM Logs
 logs/
+wandb/
+sft*/

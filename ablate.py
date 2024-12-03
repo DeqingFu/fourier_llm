@@ -105,13 +105,8 @@ def main(args):
     # Load tokenizer and model
     model_name = args.model_name
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    
+    tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForCausalLM.from_pretrained(model_name)
-    model = update_number_embeddings(model, tokenizer, verbose=True)
-
-    tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
-    model.config.pad_token_id = tokenizer.pad_token_id # updating model config
-    tokenizer.padding_side = 'right' # padding to right (otherwise SFTTrainer shows warning)
     
     # Load dataset
     dataset = load_dataset(args.dataset_name, "main", split="train")
@@ -142,18 +137,10 @@ def main(args):
         metric_for_best_model="loss",
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         push_to_hub=True,  # Enable pushing to the Hugging Face Hub
-        hub_model_id="llama3.2-1B-fourier-number-embedding",
+        hub_model_id="llama3.2-1B-fourier-number-embedding-ablate",
         hub_strategy="every_save"
     )
 
-    # Define Trainer
-    # trainer = Trainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=tokenized_dataset,
-    #     eval_dataset=tokenized_test_dataset,
-    #     tokenizer=tokenizer,
-    # )
 
     trainer = SFTTrainer(
         model=model,
@@ -183,7 +170,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_name", type=str, default="openai/gsm8k", help="Dataset name from Hugging Face Hub")
     
     # Training arguments
-    parser.add_argument("--output_dir", type=str, default="sft-fourier-gsm8k", help="Output directory for model and tokenizer")
+    parser.add_argument("--output_dir", type=str, default="sft-fourier-gsm8k-ablate", help="Output directory for model and tokenizer")
     parser.add_argument("--logging_dir", type=str, default="./logs", help="Logging directory")
     parser.add_argument("--max_length", type=int, default=512, help="Maximum sequence length")
     parser.add_argument("--num_train_epochs", type=int, default=3, help="Number of training epochs")

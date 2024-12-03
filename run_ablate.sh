@@ -7,4 +7,4 @@
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/llm
 
-python train.py --max_length 2048
+python ablate.py --max_length 2048
