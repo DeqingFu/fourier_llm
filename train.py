@@ -54,7 +54,7 @@ def update_number_embeddings(model, tokenizer, verbose=False, max_single_number=
         verbose: If True, print details about updated tokens.
     """
     # Extract the embedding layer from the model
-    embedding_layer = model.embed_tokens.weight.data
+    embedding_layer = model.model.embed_tokens.weight.data
 
     # Identify tokens corresponding to numbers that are single tokens
     single_token_id_to_number = {}
@@ -74,10 +74,10 @@ def update_number_embeddings(model, tokenizer, verbose=False, max_single_number=
     prime_numbers = get_prime_numbers(fourier_dim)
 
     for number, token_id in single_token_id_to_number.items():
-        new_embedding = torch.zeros(embedding_layer.size[1])
+        new_embedding = torch.zeros(embedding_layer.size(1))
         new_embedding[:fourier_dim] = get_fourier_embeddings(number, prime_numbers)
         embedding_layer[token_id] = new_embedding
-    model.embed_tokens.weight.data = embedding_layer
+    model.model.embed_tokens.weight.data = embedding_layer
     return model 
 # Preprocess function
 def preprocess_function(example, tokenizer, max_length):
@@ -104,9 +104,20 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
     model = update_number_embeddings(model, tokenizer)
+    # Freeze all parameters
+    for param in model.parameters():
+        param.requires_grad = False
+
+    # Unfreeze the embedding layer
+    for param in model.model.embed_tokens.parameters():
+        param.requires_grad = True
+
+    # Unfreeze the output (lm_head) layer
+    for param in model.lm_head.parameters():
+        param.requires_grad = True
     # Load dataset
-    dataset = load_dataset(args.dataset_name, split="train")
-    test_dataset = load_dataset(args.dataset_name, split="test")
+    dataset = load_dataset(args.dataset_name, "main", split="train")
+    test_dataset = load_dataset(args.dataset_name, "main", split="test")
 
     # Preprocess dataset
     max_length = args.max_length
@@ -129,10 +140,14 @@ def main(args):
         weight_decay=args.weight_decay,
         fp16=args.fp16,
         logging_dir=args.logging_dir,
-        report_to="tensorboard",
+        report_to="wandb",
         load_best_model_at_end=True,
         metric_for_best_model="loss",
         gradient_accumulation_steps=args.gradient_accumulation_steps,
+        run_name="fourier_number_embedding",  # W&B run name
+        push_to_hub=True,  # Enable pushing to the Hugging Face Hub
+        hub_model_id="llama3.2-1B-fourier-number-embedding",
+        hub_strategy="every_save"
     )
 
     # Define Trainer
@@ -146,6 +161,7 @@ def main(args):
 
     # Start training
     trainer.train()
+    trainer.push_to_hub()
 
     # Save the final model
     model.save_pretrained(args.output_dir)
@@ -156,8 +172,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Supervised Fine-Tuning on GSM8K")
     
     # Model and Dataset
-    parser.add_argument("--model_name", type=str, default="llama-3.2-1B-Instruct", help="Base model name")
-    parser.add_argument("--dataset_name", type=str, default="gsm8k", help="Dataset name from Hugging Face Hub")
+    parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.2-1B-Instruct", help="Base model name")
+    parser.add_argument("--dataset_name", type=str, default="openai/gsm8k", help="Dataset name from Hugging Face Hub")
     
     # Training arguments
     parser.add_argument("--output_dir", type=str, default="./sft-fourier-gsm8k", help="Output directory for model and tokenizer")
