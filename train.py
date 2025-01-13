@@ -17,95 +17,18 @@ from trl import SFTTrainer
 from model import LlamaForCausalLMWithNumberLinear
 import re
 
+from utils import update_number_embeddings
+
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
 
-def gen_primes():
-    D = {}
-    q = 2  # first integer to test for primality.
-
-    while True:
-        if q not in D:
-            # not marked composite, must be prime
-            yield q
-
-            # first multiple of q not already marked
-            D[q * q] = [q]
-        else:
-            for p in D[q]:
-                D.setdefault(p + q, []).append(p)
-            # no longer need D[q], free memory
-            del D[q]
-        q += 1
-
-
-def get_prime_numbers(fourier_dim):
-    n_prime_numbers = fourier_dim // 2
-    prime_numbers = [x for x in itertools.islice(gen_primes(), n_prime_numbers)]
-    return prime_numbers
-
-
-def get_fourier_embeddings(num, prime_numbers):
-    fourier_embeddings = []
-    for prime in prime_numbers:
-        fourier_embeddings.extend(
-            [
-                math.cos(2 * math.pi * num / prime),
-                math.sin(2 * math.pi * num / prime),
-            ]
-        )
-    fourier_embeddings = torch.FloatTensor(fourier_embeddings)
-    return fourier_embeddings
-
-
-def update_number_embeddings(model, tokenizer, verbose=False, max_single_number=10_000):
-    """
-    Updates the token embeddings for numbers that are tokenized as single tokens.
-
-    Args:
-        model: Pretrained model from `transformers`.
-        tokenizer: Tokenizer corresponding to the model.
-        new_embedding_value: A tensor or function to generate new embeddings for number tokens.
-                             If None, initializes with random values.
-        verbose: If True, print details about updated tokens.
-    """
-    # Extract the embedding layer from the model
-    embedding_layer = model.model.embed_tokens.weight.data
-
-    # Identify tokens corresponding to numbers that are single tokens
-    single_token_id_to_number = {}
-    for number in range(max_single_number + 1):  # Check numbers 0-9
-        token = str(number)
-        tokenized = tokenizer(token, add_special_tokens=False).input_ids
-        if len(tokenized) == 1:  # Single token
-            single_token_id_to_number[tokenized[0]] = number
-        tokenized = tokenizer(f" {token}", add_special_tokens=False).input_ids
-        if len(tokenized) == 1:  # Single token
-            single_token_id_to_number[tokenized[0]] = number
-    if verbose:
-        print(
-            f"Single-token numbers: {[tokenizer.decode([t]) for t in single_token_id_to_number.keys()]}"
-        )
-
-    # Update embeddings for these tokens
-    fourier_dim = 128
-    prime_numbers = get_prime_numbers(fourier_dim)
-
-    for number, token_id in single_token_id_to_number.items():
-        new_embedding = torch.zeros(embedding_layer.size(1))
-        new_embedding[:fourier_dim] = get_fourier_embeddings(number, prime_numbers)
-        embedding_layer[token_id] = new_embedding
-    model.model.embed_tokens.weight.data = embedding_layer
-    return model
-
-
 # Preprocess function
-def preprocess_function(example, tokenizer):
+def preprocess_function(example, tokenizer, args):
     """
     Preprocess the data for supervised fine-tuning.
     """
-    prompt = example["question"]  # Adjust if dataset format differs
-    answer = example["answer"]  # Adjust if dataset format differs
+    prompt = example[args.question_column_name]  # Adjust if dataset format differs
+    answer = example[args.answer_column_name]  # Adjust if dataset format differs
     answer = re.sub(r"<<.*?>>", "", answer)
     row_json = [
         {"role": "user", "content": prompt},
@@ -149,6 +72,8 @@ def main(args):
     train_dataset = dataset.map(lambda x: preprocess_function(x, tokenizer))
     test_dataset = test_dataset.map(lambda x: preprocess_function(x, tokenizer))
 
+    hub_name = f'{args.model_name.split("/")[-1].lower()}_fourier_{args.dataset_name.split("/")[-1].lower()}'
+    hub_name = hub_name.replace("-", "_")
     # Define training arguments
     training_args = TrainingArguments(
         output_dir=args.output_dir,
@@ -170,18 +95,9 @@ def main(args):
         # metric_for_best_model="loss",
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         push_to_hub=True,  # Enable pushing to the Hugging Face Hub
-        hub_model_id="llama3.2-1B-fourier-number-embedding",
+        hub_model_id=hub_name,
         hub_strategy="every_save",
     )
-
-    # Define Trainer
-    # trainer = Trainer(
-    #     model=model,
-    #     args=training_args,
-    #     train_dataset=tokenized_dataset,
-    #     eval_dataset=tokenized_test_dataset,
-    #     tokenizer=tokenizer,
-    # )
 
     trainer = SFTTrainer(
         model=model,
@@ -224,7 +140,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="sft-fourier-gsm8k",
+        default="sft-fourier",
         help="Output directory for model and tokenizer",
     )
     parser.add_argument(
@@ -276,6 +192,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "--fp16", action="store_true", help="Use FP16 mixed precision training"
     )
+    parser.add_argument(
+        "--question_column_name",
+        type=str,
+        default="question",
+        help="Column name for the questions",
+    )
+    parser.add_argument(
+        "--answer_column_name",
+        type=str,
+        default="answer",
+        help="Column name for the answers",
+    )
+    parser.add_argument(
+        "--ablate",
+        action="store_true",
+        help="Ablate without using fourier number embeddings",
+    )  # Not implemented yet
 
     args = parser.parse_args()
     main(args)

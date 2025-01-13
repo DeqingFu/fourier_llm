@@ -7,4 +7,9 @@
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/llm
 
-python train.py --max_length 2048 --output_dir sft-fourier-gsm8k-2025
+python train.py \
+    --max_length 2048 \
+    --dataset_name nvidia/OpenMathInstruct-2 \
+    --output_dir sft-fourier-open-math-instruct \
+    --question_column_name problem \
+    --answer_column_name generated_solution

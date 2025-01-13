@@ -3,7 +3,10 @@ from model import LlamaForCausalLMWithNumberLinear
 from transformers import AutoTokenizer
 from transformers import pipeline
 import torch
-from train import update_number_embeddings
+from utils import update_number_embeddings
+import logging
+
+logging.basicConfig(level="ERROR")
 
 model_name = "deqing/llama3.2-1B-fourier-number-embedding"
 model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
