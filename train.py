@@ -135,6 +135,8 @@ def main(args):
     original_model = LlamaForCausalLM.from_pretrained(model_name)
     model.load_state_dict(original_model.state_dict(), strict=False)
     model = update_number_embeddings(model, tokenizer, verbose=True)
+    for param in model.model.embed_tokens.parameters():
+        param.requires_grad = False
 
     model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
     tokenizer.padding_side = (

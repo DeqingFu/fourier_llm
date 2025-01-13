@@ -1,11 +1,15 @@
 from transformers import LlamaForCausalLM
+from model import LlamaForCausalLMWithNumberLinear
 from transformers import AutoTokenizer
 from transformers import pipeline
 import torch
+from train import update_number_embeddings
 
 model_name = "deqing/llama3.2-1B-fourier-number-embedding"
-model = LlamaForCausalLM.from_pretrained(model_name)
+model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = update_number_embeddings(model, tokenizer, verbose=True)
+
 model.cuda()
 model.eval()
 pipe = pipeline(
@@ -26,13 +30,15 @@ def get_response(prompt):
     )
 
     with torch.no_grad():
-        outputs = pipe(messages, max_new_tokens=1024, do_sample=False, return_full_text=False)
+        outputs = pipe(
+            messages, max_new_tokens=1024, do_sample=False, return_full_text=False
+        )
 
     return outputs[0]["generated_text"]
 
 
 if __name__ == "__main__":
-    
+
     while True:
         prompt = input("User: ")
         response = get_response(prompt)
