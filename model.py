@@ -67,16 +67,33 @@ class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
         token_embeddings = self._apply_number_linear(token_embeddings, input_ids)
 
         # Replace the embeddings in the model's inputs
+        kwargs.pop("inputs_embeds", None)  # Ensure inputs_embeds is not provided
         outputs = super().forward(
             inputs_embeds=token_embeddings, attention_mask=attention_mask, **kwargs
         )
 
         return outputs
 
+    def generate(
+        self, input_ids=None, attention_mask=None, max_length=20, num_beams=1, **kwargs
+    ):
+        """Generate text using the model with the custom linear layer for number tokens."""
+        if input_ids is None:
+            raise ValueError("input_ids must be provided for generation.")
 
-# To use the model, set the tokenizer in the config:
-# from transformers import AutoTokenizer, LlamaConfig
-# tokenizer = AutoTokenizer.from_pretrained("<model-name>")
-# config = LlamaConfig.from_pretrained("<model-name>")
-# config.tokenizer = tokenizer
-# model = LlamaForCausalLMWithNumberLinear(config)
+        # Ensure tokenizer is set
+        if self._tokenizer is None:
+            raise ValueError(
+                "Tokenizer must be set using set_tokenizer method before generation."
+            )
+
+        # Generate text using the superclass generate method
+        outputs = super().generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            max_length=max_length,
+            num_beams=num_beams,
+            **kwargs
+        )
+
+        return outputs

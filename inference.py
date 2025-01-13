@@ -9,6 +9,7 @@ model_name = "deqing/llama3.2-1B-fourier-number-embedding"
 model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = update_number_embeddings(model, tokenizer, verbose=True)
+model.set_tokenizer(tokenizer)
 
 model.cuda()
 model.eval()
