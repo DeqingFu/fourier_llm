@@ -166,8 +166,8 @@ def main(args):
         fp16=args.fp16,
         logging_dir=args.logging_dir,
         report_to="wandb",
-        load_best_model_at_end=True,
-        metric_for_best_model="loss",
+        # load_best_model_at_end=True,
+        # metric_for_best_model="loss",
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         push_to_hub=True,  # Enable pushing to the Hugging Face Hub
         hub_model_id="llama3.2-1B-fourier-number-embedding",
