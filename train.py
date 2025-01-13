@@ -15,6 +15,7 @@ import pdb
 import os
 from trl import SFTTrainer
 from model import LlamaForCausalLMWithNumberLinear
+import re
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
@@ -105,6 +106,7 @@ def preprocess_function(example, tokenizer):
     """
     prompt = example["question"]  # Adjust if dataset format differs
     answer = example["answer"]  # Adjust if dataset format differs
+    answer = re.sub(r"<<.*?>>", "", answer)
     row_json = [
         {"role": "user", "content": prompt},
         {"role": "assistant", "content": answer},
