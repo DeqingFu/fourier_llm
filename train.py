@@ -125,11 +125,9 @@ def main(args):
 
     config = LlamaConfig.from_pretrained(model_name)
 
-    # Add tokenizer to config for number token processing
-    config.tokenizer = tokenizer
-
     # Step 2: Initialize the custom model
     model = LlamaForCausalLMWithNumberLinear(config)
+    model.set_tokenizer(tokenizer)
 
     # Step 3: Load weights from the pretrained model
     original_model = LlamaForCausalLM.from_pretrained(model_name)

@@ -13,10 +13,15 @@ class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
 
         # Regex pattern to identify number tokens
         self.number_token_pattern = r"\\d+"  # This matches numerical tokens
+        self.tokenizer = None
+
+    def set_tokenizer(self, tokenizer):
+        """Set the tokenizer to be used for identifying number tokens."""
+        self.tokenizer = tokenizer
 
     def _apply_number_linear(self, token_embeddings, input_ids):
         # Identify number tokens using tokenizer
-        if self.config.tokenizer is None:
+        if self.tokenizer is None:
             raise ValueError(
                 "Tokenizer must be set in the model config to identify number tokens."
             )
@@ -24,7 +29,7 @@ class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
         # Decode tokens to strings and find number tokens (batched)
         batch_size, seq_length = input_ids.shape
         token_strings = [
-            [self.config.tokenizer.decode([token_id]) for token_id in input_ids[b]]
+            [self.tokenizer.decode([token_id]) for token_id in input_ids[b]]
             for b in range(batch_size)
         ]
 
