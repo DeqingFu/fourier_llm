@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -o ./logs/slurm-%j.out # STDOUT
-#SBATCH --gres=gpu:a6000:1
+#SBATCH --gres=gpu:a6000:2
 #SBATCH --cpus-per-task=32
 #SBATCH --time=2-0
 #SBATCH --exclude=allegro-adams,ink-mia,ink-noah

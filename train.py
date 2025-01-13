@@ -23,12 +23,12 @@ os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
 
 # Preprocess function
-def preprocess_function(example, tokenizer, args):
+def preprocess_function(example, tokenizer, question_column_name, answer_column_name):
     """
     Preprocess the data for supervised fine-tuning.
     """
-    prompt = example[args.question_column_name]  # Adjust if dataset format differs
-    answer = example[args.answer_column_name]  # Adjust if dataset format differs
+    prompt = example[question_column_name]  # Adjust if dataset format differs
+    answer = example[answer_column_name]  # Adjust if dataset format differs
     answer = re.sub(r"<<.*?>>", "", answer)
     row_json = [
         {"role": "user", "content": prompt},
@@ -64,13 +64,24 @@ def main(args):
         "right"  # padding to right (otherwise SFTTrainer shows warning)
     )
 
-    # Load dataset
-    dataset = load_dataset(args.dataset_name, "main", split="train")
-    test_dataset = load_dataset(args.dataset_name, "main", split="test")
+    # Load and Preprocess dataset
+    if "gsm8k" in args.dataset_name:
+        dataset = load_dataset("openai/gsm8k", "main", split="train")
+    elif "OpenMath" in args.dataset_name:
+        dataset = load_dataset(args.dataset_name, split="train_1M")
+    else:
+        raise ValueError("Dataset not supported yet")
+    train_dataset = dataset.map(
+        lambda x: preprocess_function(
+            x, tokenizer, args.question_column_name, args.answer_column_name
+        )
+    )
 
-    # Preprocess dataset
-    train_dataset = dataset.map(lambda x: preprocess_function(x, tokenizer))
-    test_dataset = test_dataset.map(lambda x: preprocess_function(x, tokenizer))
+    ## Always using gsm8k main test set for evaluation
+    test_dataset = load_dataset("openai/gsm8k", "main", split="test")
+    test_dataset = test_dataset.map(
+        lambda x: preprocess_function(x, tokenizer, "question", "answer")
+    )
 
     hub_name = f'{args.model_name.split("/")[-1].lower()}_fourier_{args.dataset_name.split("/")[-1].lower()}'
     hub_name = hub_name.replace("-", "_")
