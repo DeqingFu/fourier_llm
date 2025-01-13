@@ -51,6 +51,14 @@ class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
 
         return token_embeddings
 
+    def state_dict(self, *args, **kwargs):
+        """Override state_dict to exclude _tokenizer."""
+        state = super().state_dict(*args, **kwargs)
+        state.pop(
+            "_tokenizer", None
+        )  # Ensure _tokenizer is not included in the state dict
+        return state
+
     def forward(self, input_ids=None, attention_mask=None, **kwargs):
         # Get token embeddings from the embedding layer
         token_embeddings = self.model.embed_tokens(input_ids)
@@ -64,14 +72,6 @@ class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
         )
 
         return outputs
-
-    def state_dict(self, *args, **kwargs):
-        """Override state_dict to exclude _tokenizer."""
-        state = super().state_dict(*args, **kwargs)
-        state.pop(
-            "_tokenizer", None
-        )  # Ensure _tokenizer is not included in the state dict
-        return state
 
 
 # To use the model, set the tokenizer in the config:
