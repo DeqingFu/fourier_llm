@@ -8,7 +8,8 @@ source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/llm
 
 python train.py \
-    --max_length 2048 \
+    --max_length 1024 \
+    --train_batch_size 1 \
     --dataset_name nvidia/OpenMathInstruct-2 \
     --output_dir sft-fourier-open-math-instruct \
     --question_column_name problem \

@@ -5,10 +5,13 @@ from transformers import pipeline
 import torch
 from utils import update_number_embeddings
 import logging
+import warnings
 
-logging.basicConfig(level="ERROR")
+logging.basicConfig(level="CRITICAL")
+warnings.filterwarnings("ignore")
 
-model_name = "deqing/llama3.2-1B-fourier-number-embedding"
+
+model_name = "deqing/llama_3.2_1b_instruct_fourier_openmathinstruct_2"
 model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = update_number_embeddings(model, tokenizer, verbose=True)
@@ -21,7 +24,8 @@ pipe = pipeline(
     model=model,
     tokenizer=tokenizer,
     torch_dtype=torch.float16,
-    device_map="auto",
+    device="cuda",
+    device_map="cuda",
 )
 
 
@@ -35,7 +39,7 @@ def get_response(prompt):
 
     with torch.no_grad():
         outputs = pipe(
-            messages, max_new_tokens=1024, do_sample=False, return_full_text=False
+            messages, max_new_tokens=128, do_sample=False, return_full_text=False
         )
 
     return outputs[0]["generated_text"]
