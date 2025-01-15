@@ -6,15 +6,20 @@ import torch
 from utils import update_number_embeddings
 import logging
 import warnings
+import tqdm
+import re
+import numpy as np
 
 logging.basicConfig(level="CRITICAL")
-warnings.filterwarnings("ignore")
-
+warnings.filterwarnings("ignore", message="Both `max_new_tokens`.*")
+logging.getLogger("transformers").setLevel(logging.ERROR)
 
 model_name = "deqing/llama_3.2_1b_instruct_fourier_openmathinstruct_2"
 model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = update_number_embeddings(model, tokenizer, verbose=True)
+model = update_number_embeddings(
+    model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+)
 model.set_tokenizer(tokenizer)
 
 model.cuda()
@@ -39,13 +44,39 @@ def get_response(prompt):
 
     with torch.no_grad():
         outputs = pipe(
-            messages, max_new_tokens=128, do_sample=False, return_full_text=False
+            messages,
+            max_new_tokens=1024,
+            do_sample=False,
+            return_full_text=False,
         )
 
     return outputs[0]["generated_text"]
 
 
 if __name__ == "__main__":
+    # test addition
+    all_acc = []
+    diff = []
+    pairs = [(x, y) for x in range(1000) for y in range(x, 1000)]
+    sampled_indices = np.random.choice(range(len(pairs)), size=200, replace=False)
+    sampled_pairs = [pairs[i] for i in sampled_indices]
+    eval_bar = tqdm.tqdm(sampled_pairs)
+    for x, y in eval_bar:
+        prompt = f"{x} + {y} = "
+        response = get_response(prompt)
+        matches = re.findall(r"\\boxed\{(\d+)\}", response)
+        if len(matches) == 0:
+            all_acc.append(0)
+            continue
+        result = int(matches[0])
+        if result == x + y:
+            all_acc.append(1)
+        else:
+            all_acc.append(0)
+            diff.append(np.abs(result - (x + y)))
+        eval_bar.set_description(
+            f"Addition accuracy: {sum(all_acc) / len(all_acc) * 100:.2f}% with {np.mean([x%10==0 for x in diff])*100:.2f}% errors in multiples of 10"
+        )
 
     while True:
         prompt = input("User: ")

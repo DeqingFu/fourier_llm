@@ -5,6 +5,7 @@ import itertools
 import math
 import pdb
 import os
+from typing import List
 
 
 def gen_primes():
@@ -32,9 +33,9 @@ def get_prime_numbers(fourier_dim):
     return prime_numbers
 
 
-def get_fourier_embeddings(num, prime_numbers):
+def get_fourier_embeddings(num: int, fourier_basis: List[int]):
     fourier_embeddings = []
-    for prime in prime_numbers:
+    for prime in fourier_basis:
         fourier_embeddings.extend(
             [
                 math.cos(2 * math.pi * num / prime),
@@ -45,7 +46,9 @@ def get_fourier_embeddings(num, prime_numbers):
     return fourier_embeddings
 
 
-def update_number_embeddings(model, tokenizer, verbose=False, max_single_number=10_000):
+def update_number_embeddings(
+    model, tokenizer, verbose=False, max_single_number=10_000, fourier_basis=None
+):
     """
     Updates the token embeddings for numbers that are tokenized as single tokens.
 
@@ -75,12 +78,15 @@ def update_number_embeddings(model, tokenizer, verbose=False, max_single_number=
         )
 
     # Update embeddings for these tokens
-    fourier_dim = 128
-    prime_numbers = get_prime_numbers(fourier_dim)
+    if fourier_basis is None:
+        fourier_dim = 128
+        fourier_basis = get_prime_numbers(fourier_dim)
+    else:
+        fourier_dim = len(fourier_basis) * 2  # sin and cos
 
     for number, token_id in single_token_id_to_number.items():
         new_embedding = torch.zeros(embedding_layer.size(1))
-        new_embedding[:fourier_dim] = get_fourier_embeddings(number, prime_numbers)
+        new_embedding[:fourier_dim] = get_fourier_embeddings(number, fourier_basis)
         embedding_layer[token_id] = new_embedding
     model.model.embed_tokens.weight.data = embedding_layer
     return model

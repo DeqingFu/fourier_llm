@@ -16,6 +16,7 @@ import os
 from trl import SFTTrainer
 from model import LlamaForCausalLMWithNumberLinear
 import re
+from datetime import datetime
 
 from utils import update_number_embeddings
 
@@ -55,7 +56,9 @@ def main(args):
     # Step 3: Load weights from the pretrained model
     original_model = LlamaForCausalLM.from_pretrained(model_name)
     model.load_state_dict(original_model.state_dict(), strict=False)
-    model = update_number_embeddings(model, tokenizer, verbose=True)
+    model = update_number_embeddings(
+        model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+    )
     for param in model.model.embed_tokens.parameters():
         param.requires_grad = False
 
@@ -84,6 +87,7 @@ def main(args):
     )
 
     hub_name = f'{args.model_name.split("/")[-1].lower()}_fourier_{args.dataset_name.split("/")[-1].lower()}'
+    hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
     # Define training arguments
     training_args = TrainingArguments(
