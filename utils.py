@@ -60,7 +60,7 @@ def update_number_embeddings(
         verbose: If True, print details about updated tokens.
     """
     # Extract the embedding layer from the model
-    embedding_layer = model.model.embed_tokens.weight.data
+    embedding_layer = model.model.embed_tokens.original_token_embed.weight.data
 
     # Identify tokens corresponding to numbers that are single tokens
     single_token_id_to_number = {}
@@ -84,9 +84,10 @@ def update_number_embeddings(
     else:
         fourier_dim = len(fourier_basis) * 2  # sin and cos
 
-    for number, token_id in single_token_id_to_number.items():
+    for token_id, number in single_token_id_to_number.items():
         new_embedding = torch.zeros(embedding_layer.size(1))
         new_embedding[:fourier_dim] = get_fourier_embeddings(number, fourier_basis)
         embedding_layer[token_id] = new_embedding
-    model.model.embed_tokens.weight.data = embedding_layer
+
+    model.model.embed_tokens.original_token_embed.weight.data = embedding_layer
     return model

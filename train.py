@@ -56,10 +56,17 @@ def main(args):
     # Step 3: Load weights from the pretrained model
     original_model = LlamaForCausalLM.from_pretrained(model_name)
     model.load_state_dict(original_model.state_dict(), strict=False)
-    model = update_number_embeddings(
-        model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+    model.model.embed_tokens.original_token_embed.weight.data = (
+        original_model.model.embed_tokens.weight.data
     )
-    for param in model.model.embed_tokens.parameters():
+    model = update_number_embeddings(
+        model,
+        tokenizer,
+        verbose=True,
+        fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+    )
+
+    for param in model.model.embed_tokens.original_token_embed.parameters():
         param.requires_grad = False
 
     model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
