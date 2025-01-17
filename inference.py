@@ -17,12 +17,12 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 model_name = "deqing/llama_3.2_1b_instruct_fourier_gsm8k_2025_01_15"
 model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = update_number_embeddings(
-    model,
-    tokenizer,
-    verbose=True,
-    fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
-)
+# model = update_number_embeddings(
+#     model,
+#     tokenizer,
+#     verbose=True,
+#     fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+# )
 model.set_tokenizer(tokenizer)
 
 model.cuda()

@@ -56,9 +56,6 @@ def main(args):
     # Step 3: Load weights from the pretrained model
     original_model = LlamaForCausalLM.from_pretrained(model_name)
     model.load_state_dict(original_model.state_dict(), strict=False)
-    model.model.embed_tokens.original_token_embed.weight.data = (
-        original_model.model.embed_tokens.weight.data
-    )
     model = update_number_embeddings(
         model,
         tokenizer,
@@ -66,13 +63,14 @@ def main(args):
         fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
     )
 
-    for param in model.model.embed_tokens.original_token_embed.parameters():
+    for param in model.model.embed_tokens.parameters():
         param.requires_grad = False
 
     model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
     tokenizer.padding_side = (
         "right"  # padding to right (otherwise SFTTrainer shows warning)
     )
+    model.config._name_or_path = "llama_fourier"
 
     # Load and Preprocess dataset
     if "gsm8k" in args.dataset_name:

@@ -5,25 +5,21 @@ from transformers import LlamaForCausalLM
 import pdb
 
 
-class FNETokenEmbed(nn.Module):
-    def __init__(self, original_token_embed, hidden_size):
-        super(FNETokenEmbed, self).__init__()
-        self.original_token_embed = original_token_embed
+class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
+    def __init__(self, config):
+        super().__init__(config)
+        # Linear layer to apply to number tokens
+        self.number_linear = nn.Linear(config.hidden_size, config.hidden_size)
+
+        # Regex pattern to identify number tokens
+        self.number_token_pattern = r"\\d+"  # This matches numerical tokens
         self._tokenizer = None
-        self.number_token_pattern = r"\\d+"
-        self.number_linear = nn.Linear(hidden_size, hidden_size)
 
-    def state_dict(self, *args, **kwargs):
-        """Override state_dict to exclude _tokenizer."""
-        state = super().state_dict(*args, **kwargs)
-        state.pop(
-            "_tokenizer", None
-        )  # Ensure _tokenizer is not included in the state dict
-        return state
+    def set_tokenizer(self, tokenizer):
+        """Set the tokenizer to be used for identifying number tokens."""
+        self._tokenizer = tokenizer
 
-    def forward(self, input_ids):
-        # get token embeddings
-        token_embeddings = self.original_token_embed(input_ids)
+    def _apply_number_linear(self, token_embeddings, input_ids):
         # Identify number tokens using tokenizer
         if self._tokenizer is None:
             raise ValueError(
@@ -55,23 +51,25 @@ class FNETokenEmbed(nn.Module):
 
         return token_embeddings
 
-
-class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
-    def __init__(self, config):
-        super().__init__(config)
-        self.model.embed_tokens = FNETokenEmbed(
-            original_token_embed=self.model.embed_tokens, hidden_size=config.hidden_size
-        )
-
-    def set_tokenizer(self, tokenizer):
-        """Set the tokenizer to be used for identifying number tokens."""
-        self.model.embed_tokens._tokenizer = tokenizer
+    def state_dict(self, *args, **kwargs):
+        """Override state_dict to exclude _tokenizer."""
+        state = super().state_dict(*args, **kwargs)
+        state.pop(
+            "_tokenizer", None
+        )  # Ensure _tokenizer is not included in the state dict
+        return state
 
     def forward(self, input_ids=None, attention_mask=None, **kwargs):
+        # Get token embeddings from the embedding layer
+        token_embeddings = self.model.embed_tokens(input_ids)
+
+        # Apply the number-specific linear layer
+        token_embeddings = self._apply_number_linear(token_embeddings, input_ids)
+
         # Replace the embeddings in the model's inputs
         kwargs.pop("inputs_embeds", None)  # Ensure inputs_embeds is not provided
         outputs = super().forward(
-            input_ids=input_ids, attention_mask=attention_mask, **kwargs
+            inputs_embeds=token_embeddings, attention_mask=attention_mask, **kwargs
         )
 
         return outputs
@@ -82,6 +80,12 @@ class LlamaForCausalLMWithNumberLinear(LlamaForCausalLM):
         """Generate text using the model with the custom linear layer for number tokens."""
         if input_ids is None:
             raise ValueError("input_ids must be provided for generation.")
+
+        # Ensure tokenizer is set
+        if self._tokenizer is None:
+            raise ValueError(
+                "Tokenizer must be set using set_tokenizer method before generation."
+            )
 
         # Generate text using the superclass generate method
         outputs = super().generate(
