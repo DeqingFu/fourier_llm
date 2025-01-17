@@ -84,7 +84,7 @@ def update_number_embeddings(
     else:
         fourier_dim = len(fourier_basis) * 2  # sin and cos
 
-    for number, token_id in single_token_id_to_number.items():
+    for token_id, number in single_token_id_to_number.items():
         new_embedding = torch.zeros(embedding_layer.size(1))
         new_embedding[:fourier_dim] = get_fourier_embeddings(number, fourier_basis)
         embedding_layer[token_id] = new_embedding
