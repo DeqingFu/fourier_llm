@@ -167,3 +167,4 @@ wandb/
 sft*/
 *.png 
 number_embedding_vis.py
+*.json

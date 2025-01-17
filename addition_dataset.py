@@ -13,30 +13,28 @@ from transformers import AutoTokenizer
 
 def build_addition_dataset(tokenizer, ndigits=10, n_samples=1000):
     data = {"text": []}
-    cnt = 0
-    for a in range(10**ndigits, 10 ** (ndigits + 1)):
-        for b in range(10**ndigits, 10 ** (ndigits + 1)):
-            question = np.random.choice(
-                [
-                    f"the sum of {a} and {b} is",
-                    f"{a} plus {b} equals",
-                    f"{a} + {b} =",
-                    f"when you add {a} and {b} you get",
-                    f"the result of adding {a} and {b} is",
-                    f"{a} and {b} add up to",
-                    f"{a} and {b} sum to",
-                    f"if you add {b} to {a} you get",
-                ]
-            )
-            row_json = [
-                {"role": "user", "content": question},
-                {"role": "assistant", "content": f"{a+b}"},
+    for _ in tqdm(range(n_samples)):
+        a = np.random.randint(10**ndigits, 10 ** (ndigits + 1))
+        b = np.random.randint(10**ndigits, 10 ** (ndigits + 1))
+        question = np.random.choice(
+            [
+                f"the sum of {a} and {b} is",
+                f"{a} plus {b} equals",
+                f"{a} + {b} =",
+                f"when you add {a} and {b} you get",
+                f"the result of adding {a} and {b} is",
+                f"{a} and {b} add up to",
+                f"{a} and {b} sum to",
+                f"if you add {b} to {a} you get",
             ]
+        )
+        row_json = [
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": f"{a+b}"},
+        ]
 
-            data["text"].append(tokenizer.apply_chat_template(row_json, tokenize=False))
-            cnt += 1
-            if cnt >= n_samples:
-                break
+        data["text"].append(tokenizer.apply_chat_template(row_json, tokenize=False))
+
     return Dataset.from_dict(data)
 
 

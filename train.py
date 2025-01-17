@@ -116,7 +116,7 @@ def main(args):
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
     if args.add_addition_dataset:
-        hub_name += "plus_addition_dataset"
+        hub_name += "_plus_addition_dataset"
         args.output_dir += "_plus_addition_dataset"
     args.output_dir += "_" + args.method.replace("-", "_")
     # Define training arguments
