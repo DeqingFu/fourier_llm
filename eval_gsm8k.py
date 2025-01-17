@@ -101,7 +101,7 @@ pipe = pipeline(
 
 # Function to generate predictions from the Llama model
 def generate_prediction(question):
-    messages = NSHOT_EXAMPLES + [{"role": "user", "content": question}]
+    messages = [{"role": "user", "content": question}]
 
     with torch.no_grad():
         outputs = pipe(
