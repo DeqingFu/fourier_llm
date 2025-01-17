@@ -14,7 +14,7 @@ logging.basicConfig(level="CRITICAL")
 warnings.filterwarnings("ignore", message="Both `max_new_tokens`.*")
 logging.getLogger("transformers").setLevel(logging.ERROR)
 
-model_name = "deqing/llama_3.2_1b_instruct_fourier_gsm8k_2025_01_15"
+model_name = "deqing/llama_3.2_1b_instruct_fourier_gsm8k_2025_01_16"
 model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 # model = update_number_embeddings(

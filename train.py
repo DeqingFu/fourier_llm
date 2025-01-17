@@ -8,7 +8,7 @@ from transformers import (
     LlamaConfig,
     LlamaForCausalLM,
 )
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 import itertools
 import math
 import pdb
@@ -19,6 +19,7 @@ import re
 from datetime import datetime
 
 from utils import update_number_embeddings
+from addition_dataset import build_addition_dataset
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
@@ -47,21 +48,34 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
 
-    config = LlamaConfig.from_pretrained(model_name)
+    if args.method == "fne-full":
+        config = LlamaConfig.from_pretrained(model_name)
 
-    # Step 2: Initialize the custom model
-    model = LlamaForCausalLMWithNumberLinear(config)
-    model.set_tokenizer(tokenizer)
+        # Step 2: Initialize the custom model
+        model = LlamaForCausalLMWithNumberLinear(config)
+        model.set_tokenizer(tokenizer)
 
-    # Step 3: Load weights from the pretrained model
-    original_model = LlamaForCausalLM.from_pretrained(model_name)
-    model.load_state_dict(original_model.state_dict(), strict=False)
-    model = update_number_embeddings(
-        model,
-        tokenizer,
-        verbose=True,
-        fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
-    )
+        # Step 3: Load weights from the pretrained model
+        original_model = LlamaForCausalLM.from_pretrained(model_name)
+        model.load_state_dict(original_model.state_dict(), strict=False)
+        model = update_number_embeddings(
+            model,
+            tokenizer,
+            verbose=True,
+            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+        )
+    elif args.method == "fne-naive":
+        model = LlamaForCausalLM.from_pretrained(model_name)
+        model = update_number_embeddings(
+            model,
+            tokenizer,
+            verbose=True,
+            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+        )
+    elif args.method == "vanilla":
+        model = LlamaForCausalLM.from_pretrained(model_name)
+    else:
+        raise ValueError(f"Method {args.method} not implemented yet")
 
     for param in model.model.embed_tokens.parameters():
         param.requires_grad = False
@@ -85,15 +99,26 @@ def main(args):
         )
     )
 
+    if args.add_addition_dataset:
+        train_addition_dataset = build_addition_dataset(
+            tokenizer, ndigits=10, n_samples=len(train_dataset)
+        )
+
+        train_dataset = concatenate_datasets([train_dataset, train_addition_dataset])
+
     ## Always using gsm8k main test set for evaluation
     test_dataset = load_dataset("openai/gsm8k", "main", split="test")
     test_dataset = test_dataset.map(
         lambda x: preprocess_function(x, tokenizer, "question", "answer")
     )
 
-    hub_name = f'{args.model_name.split("/")[-1].lower()}_fourier_{args.dataset_name.split("/")[-1].lower()}'
+    hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.method}_{args.dataset_name.split("/")[-1].lower()}'
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
+    if args.add_addition_dataset:
+        hub_name += "plus_addition_dataset"
+        args.output_dir += "_plus_addition_dataset"
+    args.output_dir += "_" + args.method.replace("-", "_")
     # Define training arguments
     training_args = TrainingArguments(
         output_dir=args.output_dir,
@@ -225,10 +250,16 @@ if __name__ == "__main__":
         help="Column name for the answers",
     )
     parser.add_argument(
-        "--ablate",
-        action="store_true",
-        help="Ablate without using fourier number embeddings",
+        "--method",
+        type=str,
+        default="fne",
+        help="Method for updating number embeddings",
     )  # Not implemented yet
 
+    parser.add_argument(
+        "--add_addition_dataset",
+        action="store_true",
+        help="Add addition dataset for training",
+    )
     args = parser.parse_args()
     main(args)

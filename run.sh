@@ -12,7 +12,5 @@ python train.py \
     --train_batch_size 2 \
     --dataset_name openai/gsm8k \
     --output_dir sft-fourier-gsm8k-base-10 \
-    # --dataset_name nvidia/OpenMathInstruct-2 \
-    # --output_dir sft-fourier-open-math-instruct-base-10 \
-    # --question_column_name problem \
-    # --answer_column_name generated_solution
+    --method fne-naive \
+    --add_addition_dataset \
