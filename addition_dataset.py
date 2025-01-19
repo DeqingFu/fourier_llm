@@ -14,8 +14,8 @@ from transformers import AutoTokenizer
 def build_addition_dataset(tokenizer, ndigits=10, n_samples=1000):
     data = {"text": []}
     for _ in tqdm(range(n_samples)):
-        a = np.random.randint(10**ndigits, 10 ** (ndigits + 1))
-        b = np.random.randint(10**ndigits, 10 ** (ndigits + 1))
+        a = np.random.randint(0, 10 ** (ndigits + 1))
+        b = np.random.randint(0, 10 ** (ndigits + 1))
         question = np.random.choice(
             [
                 f"the sum of {a} and {b} is",

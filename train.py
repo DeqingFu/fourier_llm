@@ -20,6 +20,7 @@ from datetime import datetime
 
 from utils import update_number_embeddings
 from addition_dataset import build_addition_dataset
+from copy import deepcopy
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
@@ -70,8 +71,53 @@ def main(args):
             model,
             tokenizer,
             verbose=True,
-            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+            fourier_basis=[
+                2,
+                3,
+                5,
+                7,
+                10,
+                20,
+                30,
+                50,
+                70,
+                100,
+                200,
+                300,
+                500,
+                700,
+                1000,
+            ],
         )
+    elif args.method == "fne-merge":
+        model = LlamaForCausalLM.from_pretrained(model_name)
+        orginal_token_embedding_weights = model.model.embed_tokens.weight.data
+        model = update_number_embeddings(
+            model,
+            tokenizer,
+            verbose=True,
+            fourier_basis=[
+                2,
+                3,
+                5,
+                7,
+                10,
+                20,
+                30,
+                50,
+                70,
+                100,
+                200,
+                300,
+                500,
+                700,
+                1000,
+            ],
+        )
+        new_token_embedding_weights = (
+            orginal_token_embedding_weights + model.model.embed_tokens.weight.data
+        ) / 2
+        model.model.embed_tokens.weight.data = new_token_embedding_weights
     elif args.method == "vanilla":
         model = LlamaForCausalLM.from_pretrained(model_name)
     else:
@@ -88,7 +134,12 @@ def main(args):
 
     # Load and Preprocess dataset
     if "gsm8k" in args.dataset_name:
-        dataset = load_dataset("openai/gsm8k", "main", split="train")
+        dataset = concatenate_datasets(
+            [
+                load_dataset("openai/gsm8k", "main", split="train"),
+                load_dataset("openai/gsm8k", "socratic", split="train"),
+            ]
+        )
     elif "OpenMath" in args.dataset_name:
         dataset = load_dataset(args.dataset_name, split="train_1M")
     else:
@@ -99,15 +150,13 @@ def main(args):
         )
     )
 
-    if args.add_addition_dataset:
-        train_addition_dataset = build_addition_dataset(
-            tokenizer, ndigits=10, n_samples=len(train_dataset)
-        )
-
-        train_dataset = concatenate_datasets([train_dataset, train_addition_dataset])
-
     ## Always using gsm8k main test set for evaluation
-    test_dataset = load_dataset("openai/gsm8k", "main", split="test")
+    test_dataset = concatenate_datasets(
+        [
+            load_dataset("openai/gsm8k", "main", split="test"),
+            load_dataset("openai/gsm8k", "socratic", split="test"),
+        ]
+    )
     test_dataset = test_dataset.map(
         lambda x: preprocess_function(x, tokenizer, "question", "answer")
     )
@@ -143,6 +192,16 @@ def main(args):
         hub_model_id=hub_name,
         hub_strategy="every_save",
     )
+    if args.add_addition_dataset:
+        train_addition_dataset = build_addition_dataset(
+            tokenizer, ndigits=6, n_samples=len(train_dataset)
+        )
+        test_addition_dataset = build_addition_dataset(
+            tokenizer, ndigits=6, n_samples=len(test_dataset)
+        )
+
+        train_dataset = concatenate_datasets([train_dataset, train_addition_dataset])
+        test_dataset = concatenate_datasets([test_dataset, test_addition_dataset])
 
     trainer = SFTTrainer(
         model=model,
