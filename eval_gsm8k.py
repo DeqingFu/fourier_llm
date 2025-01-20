@@ -13,7 +13,7 @@ client = openai.Client()
 
 # Load your Llama model and tokenizer
 model_name = (
-    "deqing/llama_3.2_3b_instruct_fne_merge_gsm8k_2025_01_18"
+    "deqing/llama_3.2_1b_vanilla_openmathinstruct_2_2025_01_19"
 )
 # model_name = "meta-llama/Llama-3.2-1B-Instruct"
 model = LlamaForCausalLM.from_pretrained(model_name)
@@ -40,7 +40,7 @@ def generate_prediction(question):
     with torch.no_grad():
         outputs = pipe(
             messages,
-            max_new_tokens=1024,
+            max_new_tokens=256,
             do_sample=False,
             return_full_text=False,
         )

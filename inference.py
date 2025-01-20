@@ -2,6 +2,7 @@ from transformers import LlamaForCausalLM
 from model import LlamaForCausalLMWithNumberLinear
 from transformers import AutoTokenizer
 from transformers import pipeline
+from transformers import AutoConfig
 import torch
 from utils import update_number_embeddings
 import logging
@@ -16,10 +17,10 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 
 # model_name = "deqing/llama_3.2_1b_instruct_fne_naive_gsm8k_2025_01_16_plus_addition_dataset"
 model_name = (
-    "deqing/llama_3.2_1b_vanilla_gsm8k_2025_01_19"
+    "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_19"
 )
 # model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 # # model = update_number_embeddings(
 # #     model,
 # #     tokenizer,
@@ -28,6 +29,9 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 # # )
 # model.set_tokenizer(tokenizer)
 model = LlamaForCausalLM.from_pretrained(model_name)
+instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+model.config = instruct_config
+model.config.pad_token_id = tokenizer.pad_token_id
 
 model.cuda()
 model.eval()
@@ -52,10 +56,9 @@ def get_response(prompt):
     with torch.no_grad():
         outputs = pipe(
             messages,
-            max_new_tokens=1024,
-            do_sample=False,
+            max_new_tokens=256,
             return_full_text=False,
-            temperature=0.0,
+            temperature=0.7
         )
 
     return outputs[0]["generated_text"]

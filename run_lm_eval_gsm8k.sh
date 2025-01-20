@@ -7,7 +7,7 @@
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/llm
 
-MODEL_NAME="deqing/llama_3.2_1b_vanilla_gsm8k_2025_01_19"
+MODEL_NAME="deqing/llama_3.2_1b_vanilla_openmathinstruct_2_2025_01_19"
 
 accelerate launch -m lm_eval \
     --model hf \

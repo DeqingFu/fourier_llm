@@ -46,6 +46,7 @@ def get_fourier_embeddings(num: int, fourier_basis: List[int]):
     return fourier_embeddings
 
 
+
 def update_number_embeddings(
     model, tokenizer, verbose=False, max_single_number=10_000, fourier_basis=None
 ):
@@ -89,4 +90,13 @@ def update_number_embeddings(
         new_embedding[:fourier_dim] = get_fourier_embeddings(number, fourier_basis)
         embedding_layer[token_id] = new_embedding
     model.model.embed_tokens.weight.data = embedding_layer
+
+    freeze_indices = list(single_token_id_to_number.keys())
+
+    def freeze_embedding_gradients(grad):
+        # Set the gradients of frozen rows to zero
+        grad[freeze_indices] = 0
+        return grad
+
+    model.model.embed_tokens.weight.register_hook(freeze_embedding_gradients)
     return model

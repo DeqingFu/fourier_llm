@@ -47,7 +47,7 @@ def main(args):
     # Load tokenizer and model
     model_name = args.model_name
     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
-    tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
+    tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
 
     if args.method == "fne-full":
         config = LlamaConfig.from_pretrained(model_name)
@@ -100,8 +100,8 @@ def main(args):
     else:
         raise ValueError(f"Method {args.method} not implemented yet")
 
-    for param in model.model.embed_tokens.parameters():
-        param.requires_grad = False
+    # for param in model.model.embed_tokens.parameters():
+    #     param.requires_grad = False
 
     model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
     tokenizer.padding_side = (
