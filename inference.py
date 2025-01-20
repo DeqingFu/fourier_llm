@@ -16,7 +16,7 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 
 # model_name = "deqing/llama_3.2_1b_instruct_fne_naive_gsm8k_2025_01_16_plus_addition_dataset"
 model_name = (
-    "deqing/llama_3.2_1b_instruct_fne_merge_gsm8k_2025_01_17"
+    "deqing/llama_3.2_1b_vanilla_gsm8k_2025_01_19"
 )
 # model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -55,6 +55,7 @@ def get_response(prompt):
             max_new_tokens=1024,
             do_sample=False,
             return_full_text=False,
+            temperature=0.0,
         )
 
     return outputs[0]["generated_text"]

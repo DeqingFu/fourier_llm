@@ -46,7 +46,7 @@ def preprocess_function(example, tokenizer, question_column_name, answer_column_
 def main(args):
     # Load tokenizer and model
     model_name = args.model_name
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
     tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
 
     if args.method == "fne-full":
@@ -63,7 +63,7 @@ def main(args):
             model,
             tokenizer,
             verbose=True,
-            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+            fourier_basis=[10, 1000, 1000]
         )
     elif args.method == "fne-naive":
         model = LlamaForCausalLM.from_pretrained(model_name)
@@ -71,23 +71,7 @@ def main(args):
             model,
             tokenizer,
             verbose=True,
-            fourier_basis=[
-                2,
-                3,
-                5,
-                7,
-                10,
-                20,
-                30,
-                50,
-                70,
-                100,
-                200,
-                300,
-                500,
-                700,
-                1000,
-            ],
+            fourier_basis=[10, 1000, 1000]
         )
     elif args.method == "fne-merge":
         model = LlamaForCausalLM.from_pretrained(model_name)
@@ -97,27 +81,20 @@ def main(args):
             tokenizer,
             verbose=True,
             fourier_basis=[
-                2,
-                3,
-                5,
-                7,
-                10,
-                20,
-                30,
-                50,
-                70,
-                100,
-                200,
-                300,
-                500,
-                700,
-                1000,
+                10, 100, 100
             ],
         )
         new_token_embedding_weights = (
             orginal_token_embedding_weights + model.model.embed_tokens.weight.data
         ) / 2
         model.model.embed_tokens.weight.data = new_token_embedding_weights
+    elif args.method == "fne-prime":
+        model = LlamaForCausalLM.from_pretrained(model_name)
+        model = update_number_embeddings(
+            model,
+            tokenizer,
+            verbose=True
+        )
     elif args.method == "vanilla":
         model = LlamaForCausalLM.from_pretrained(model_name)
     else:
@@ -141,7 +118,10 @@ def main(args):
             ]
         )
     elif "OpenMath" in args.dataset_name:
-        dataset = load_dataset(args.dataset_name, split="train_1M")
+        dataset = load_dataset(args.dataset_name, split="train")
+        dataset = dataset.filter(
+            lambda x: x["problem_source"] in ['gsm8k', 'augmented_gsm8k']
+        )
     else:
         raise ValueError("Dataset not supported yet")
     train_dataset = dataset.map(
@@ -230,7 +210,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_name",
         type=str,
-        default="meta-llama/Llama-3.2-1B-Instruct",
+        default="meta-llama/Llama-3.2-1B",
         help="Base model name",
     )
     parser.add_argument(
