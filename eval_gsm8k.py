@@ -14,7 +14,7 @@ client = openai.Client()
 
 # Load your Llama model and tokenizer
 model_name = (
-    "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_20"
+    "deqing/llama_3.2_1b_vanilla_openmathinstruct_2_2025_01_20"
 )
 # model_name = "meta-llama/Llama-3.2-1B-Instruct"
 model = LlamaForCausalLM.from_pretrained(model_name)
@@ -104,7 +104,6 @@ def evaluate_on_gsm8k(dataset, records_path="evaluation_results.json"):
 
         # Check if a match is found
         if match:
-            print(f"First occurrence: {match.group(0)}")
             pred = match.group(0).replace("\\boxed{", "").replace("}", "")
             if pred == answer:
                 score = 1
