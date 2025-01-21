@@ -7,6 +7,7 @@ from datasets import load_dataset, concatenate_datasets
 from tqdm import tqdm
 import pdb
 import requests
+import re 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = openai.Client()
@@ -18,7 +19,7 @@ model_name = (
 # model_name = "meta-llama/Llama-3.2-1B-Instruct"
 model = LlamaForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-# tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
+model.config.pad_token_id = tokenizer.eos_token_id
 
 
 model.cuda()
@@ -97,7 +98,24 @@ def evaluate_on_gsm8k(dataset, records_path="evaluation_results.json"):
         prediction = generate_prediction(question)
 
         # Evaluate using GPT-3.5-Turbo
-        score, explanation = evaluate_with_gpt(question, prediction, ground_truth)
+        # parsing solution
+        answer = ground_truth.split("####")[-1].strip()
+        match = re.search(r'\\boxed\{(.*?)\}', prediction)
+
+        # Check if a match is found
+        if match:
+            print(f"First occurrence: {match.group(0)}")
+            pred = match.group(0).replace("\\boxed{", "").replace("}", "")
+            if pred == answer:
+                score = 1
+                explanation = f"The prediction {pred} matches the ground truth {answer}."
+            else:
+                score = 0
+                explanation = f"The prediction {pred} does not match the ground truth {answer}."
+            evaluator = "parsing"
+        else:
+            score, explanation = evaluate_with_gpt(question, prediction, ground_truth)
+            evaluator = "gpt-3.5-turbo"
 
         # Store the results
         results.append(
@@ -107,6 +125,7 @@ def evaluate_on_gsm8k(dataset, records_path="evaluation_results.json"):
                 "prediction": prediction,
                 "score": score,
                 "explanation": explanation,
+                "evaluator": evaluator,
             }
         )
 
