@@ -19,6 +19,6 @@ python train.py \
     --question_column_name "problem" \
     --answer_column_name "generated_solution" \
     --output_dir sft-open-math \
-    --method fne-prime \
+    --method fne-naive \
     --model_name "meta-llama/Llama-3.2-1B"
     # --add_addition_dataset \

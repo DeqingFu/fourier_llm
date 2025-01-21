@@ -2,11 +2,13 @@ import argparse
 import torch
 from transformers import (
     AutoTokenizer,
+    AutoConfig,
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
     LlamaConfig,
     LlamaForCausalLM,
+    GenerationConfig
 )
 from datasets import load_dataset, concatenate_datasets
 import itertools
@@ -48,7 +50,10 @@ def main(args):
     model_name = args.model_name
     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
     tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
-
+    tokenizer.padding_side = (
+        "right"  # padding to right (otherwise SFTTrainer shows warning)
+    )
+    
     if args.method == "fne-full":
         config = LlamaConfig.from_pretrained(model_name)
 
@@ -102,11 +107,12 @@ def main(args):
 
     # for param in model.model.embed_tokens.parameters():
     #     param.requires_grad = False
-
+    instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+    model.config = instruct_config
+    generation_config = GenerationConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+    model.generation_config = generation_config
     model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
-    tokenizer.padding_side = (
-        "right"  # padding to right (otherwise SFTTrainer shows warning)
-    )
+    
     model.config._name_or_path = "llama_fourier"
 
     # Load and Preprocess dataset
