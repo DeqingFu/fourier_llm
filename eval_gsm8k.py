@@ -7,15 +7,37 @@ from datasets import load_dataset, concatenate_datasets
 from tqdm import tqdm
 import pdb
 import requests
-import re 
+import re
+from fractions import Fraction
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = openai.Client()
 
+
+def parse_number(string):
+    # Remove any commas in the string (for cases like "2,000.01")
+    string = string.replace(",", "")
+
+    # Try converting directly to float first (handles decimals, scientific notation)
+    try:
+        return float(string)
+    except ValueError:
+        pass  # If it fails, continue to check for fractions
+
+    # If it's a fraction, convert using fractions.Fraction
+    if "/" in string:
+        try:
+            frac = Fraction(string)
+            return float(frac)  # Return the float value of the fraction
+        except ValueError:
+            pass  # If it fails, return None or handle the error as needed
+
+    # If the string can't be converted to float or fraction, raise an error
+    raise ValueError(f"Cannot convert string '{string}' to a float.")
+
+
 # Load your Llama model and tokenizer
-model_name = (
-    "deqing/llama_3.2_1b_vanilla_openmathinstruct_2_2025_01_20"
-)
+model_name = "deqing/llama_3.2_1b_fne_transform_openmathinstruct_2_2025_01_21"
 # model_name = "meta-llama/Llama-3.2-1B-Instruct"
 model = LlamaForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -41,9 +63,10 @@ def generate_prediction(question):
     with torch.no_grad():
         outputs = pipe(
             messages,
-            max_new_tokens=256,
+            max_new_tokens=512,
             do_sample=False,
             return_full_text=False,
+            temperature=0.0,
         )
 
     return outputs[0]["generated_text"]
@@ -100,19 +123,28 @@ def evaluate_on_gsm8k(dataset, records_path="evaluation_results.json"):
         # Evaluate using GPT-3.5-Turbo
         # parsing solution
         answer = ground_truth.split("####")[-1].strip()
-        match = re.search(r'\\boxed\{(.*?)\}', prediction)
+        match = re.search(r"\\boxed\{(.*?)\}", prediction)
 
+        use_gpt_eval = False
         # Check if a match is found
         if match:
             pred = match.group(0).replace("\\boxed{", "").replace("}", "")
-            if pred == answer:
+            try:
+                float_answer = parse_number(answer)
+                float_pred = parse_number(pred)
+            except:
+                use_gpt_eval = True
+            if float_pred == float_answer:
                 score = 1
-                explanation = f"The prediction {pred} matches the ground truth {answer}."
+                explanation = f"The prediction {float_pred} matches the ground truth {float_answer}."
             else:
                 score = 0
-                explanation = f"The prediction {pred} does not match the ground truth {answer}."
+                explanation = f"The prediction {float_pred} does not match the ground truth {float_answer}."
             evaluator = "parsing"
         else:
+            use_gpt_eval = True
+
+        if use_gpt_eval:
             score, explanation = evaluate_with_gpt(question, prediction, ground_truth)
             evaluator = "gpt-3.5-turbo"
 

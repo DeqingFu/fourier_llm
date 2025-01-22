@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -o ./logs/slurm-%j.out # STDOUT
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:a6000:1
 #SBATCH --cpus-per-task=32
 #SBATCH --time=2-0
 #SBATCH --exclude=allegro-adams,ink-mia,ink-noah
@@ -9,16 +9,13 @@ source activate /home/deqingfu/miniconda3/envs/llm
 
 python train.py \
     --max_length 4096 \
-    --train_batch_size 2 \
+    --train_batch_size 1 \
     --learning_rate 2e-5 \
     --gradient_accumulation_steps 16 \
-    --num_train_epochs 1 \
+    --num_train_epochs 3 \
     --save_steps 1000 \
     --eval_steps 1000 \
-    --dataset_name nvidia/OpenMathInstruct-2 \
-    --question_column_name "problem" \
-    --answer_column_name "generated_solution" \
-    --output_dir sft-open-math \
-    --method fne-transform \
+    --dataset_name openai/gsm8k \
+    --output_dir sft-gsm8k \
+    --method vanilla \
     --model_name "meta-llama/Llama-3.2-1B"
-    # --add_addition_dataset \

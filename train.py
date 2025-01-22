@@ -8,7 +8,7 @@ from transformers import (
     TrainingArguments,
     LlamaConfig,
     LlamaForCausalLM,
-    GenerationConfig
+    GenerationConfig,
 )
 from datasets import load_dataset, concatenate_datasets
 import itertools
@@ -20,7 +20,7 @@ from model import LlamaForCausalLMWithNumberLinear
 import re
 from datetime import datetime
 
-from utils import update_number_embeddings
+from utils import update_number_embeddings, transformer_number_embeddings
 from addition_dataset import build_addition_dataset
 from copy import deepcopy
 
@@ -53,7 +53,7 @@ def main(args):
     tokenizer.padding_side = (
         "right"  # padding to right (otherwise SFTTrainer shows warning)
     )
-    
+
     if args.method == "fne-full":
         config = LlamaConfig.from_pretrained(model_name)
 
@@ -65,18 +65,20 @@ def main(args):
         original_model = LlamaForCausalLM.from_pretrained(model_name)
         model.load_state_dict(original_model.state_dict(), strict=False)
         model = update_number_embeddings(
-            model,
-            tokenizer,
-            verbose=True,
-            fourier_basis=[10, 1000, 1000]
+            model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
         )
     elif args.method == "fne-naive":
         model = LlamaForCausalLM.from_pretrained(model_name)
         model = update_number_embeddings(
+            model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+        )
+    elif args.method == "fne-transform":
+        model = LlamaForCausalLM.from_pretrained(model_name)
+        model = transformer_number_embeddings(
             model,
             tokenizer,
             verbose=True,
-            fourier_basis=[10, 1000, 1000]
+            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
         )
     elif args.method == "fne-merge":
         model = LlamaForCausalLM.from_pretrained(model_name)
@@ -85,9 +87,7 @@ def main(args):
             model,
             tokenizer,
             verbose=True,
-            fourier_basis=[
-                10, 100, 100
-            ],
+            fourier_basis=[10, 100, 1000],
         )
         new_token_embedding_weights = (
             orginal_token_embedding_weights + model.model.embed_tokens.weight.data
@@ -95,11 +95,7 @@ def main(args):
         model.model.embed_tokens.weight.data = new_token_embedding_weights
     elif args.method == "fne-prime":
         model = LlamaForCausalLM.from_pretrained(model_name)
-        model = update_number_embeddings(
-            model,
-            tokenizer,
-            verbose=True
-        )
+        model = update_number_embeddings(model, tokenizer, verbose=True)
     elif args.method == "vanilla":
         model = LlamaForCausalLM.from_pretrained(model_name)
     else:
@@ -109,10 +105,12 @@ def main(args):
     #     param.requires_grad = False
     instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
     model.config = instruct_config
-    generation_config = GenerationConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+    generation_config = GenerationConfig.from_pretrained(
+        "meta-llama/Llama-3.2-1B-Instruct"
+    )
     model.generation_config = generation_config
     model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
-    
+
     model.config._name_or_path = "llama_fourier"
 
     # Load and Preprocess dataset
@@ -126,7 +124,7 @@ def main(args):
     elif "OpenMath" in args.dataset_name:
         dataset = load_dataset(args.dataset_name, split="train")
         dataset = dataset.filter(
-            lambda x: x["problem_source"] in ['gsm8k', 'augmented_gsm8k']
+            lambda x: x["problem_source"] in ["gsm8k", "augmented_gsm8k"]
         )
     else:
         raise ValueError("Dataset not supported yet")
