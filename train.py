@@ -122,7 +122,7 @@ def main(args):
             ]
         )
     elif "OpenMath" in args.dataset_name:
-        dataset = load_dataset(args.dataset_name, split="train")
+        dataset = load_dataset(args.dataset_name, split="train_1M")
         dataset = dataset.filter(
             lambda x: x["problem_source"] in ["gsm8k", "augmented_gsm8k"]
         )

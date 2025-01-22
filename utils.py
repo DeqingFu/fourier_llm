@@ -101,6 +101,15 @@ def transformer_number_embeddings(
     # Update the embedding layer
     model.model.embed_tokens.weight.data[indices_to_transform] = W_filtered
 
+    freeze_indices = list(single_token_id_to_number.keys())
+
+    def freeze_embedding_gradients(grad):
+        # Set the gradients of frozen rows to zero
+        grad[freeze_indices] = 0
+        return grad
+
+    model.model.embed_tokens.weight.register_hook(freeze_embedding_gradients)
+
     return model
 
 
