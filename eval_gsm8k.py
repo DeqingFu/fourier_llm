@@ -37,7 +37,7 @@ def parse_number(string):
 
 
 # Load your Llama model and tokenizer
-model_name = "deqing/llama_3.2_1b_fne_transform_openmathinstruct_2_2025_01_21"
+model_name = "deqing/llama_3.2_1b_vanilla_openmathinstruct_2_2025_01_22_plus_addition_dataset"
 # model_name = "meta-llama/Llama-3.2-1B-Instruct"
 model = LlamaForCausalLM.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)

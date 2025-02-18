@@ -20,5 +20,5 @@ python train.py \
     --answer_column_name "generated_solution" \
     --output_dir sft-open-math \
     --method vanilla \
-    --model_name "meta-llama/Llama-3.2-1B"
-    # --add_addition_dataset \
+    --model_name "meta-llama/Llama-3.2-1B" \
+    --add_additional_dataset \

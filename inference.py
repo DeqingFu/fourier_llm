@@ -20,7 +20,7 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 # model_name = (
 #     "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_19"
 # )
-model_name = "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_20"
+model_name = "deqing/llama_3.2_1b_fne_transform_gsm8k_2025_01_22_plus_addition_dataset"
 # model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 # # model = update_number_embeddings(

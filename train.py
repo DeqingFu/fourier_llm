@@ -21,7 +21,7 @@ import re
 from datetime import datetime
 
 from utils import update_number_embeddings, transformer_number_embeddings
-from addition_dataset import build_addition_dataset
+from addition_dataset import build_additional_dataset
 from copy import deepcopy
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
@@ -148,7 +148,7 @@ def main(args):
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.method}_{args.dataset_name.split("/")[-1].lower()}'
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
-    if args.add_addition_dataset:
+    if args.add_additional_dataset:
         hub_name += "_plus_addition_dataset"
         args.output_dir += "_plus_addition_dataset"
     args.output_dir += "_" + args.method.replace("-", "_")
@@ -176,12 +176,12 @@ def main(args):
         hub_model_id=hub_name,
         hub_strategy="every_save",
     )
-    if args.add_addition_dataset:
-        train_addition_dataset = build_addition_dataset(
-            tokenizer, ndigits=6, n_samples=len(train_dataset)
+    if args.add_additional_dataset:
+        train_addition_dataset = build_additional_dataset(
+            tokenizer, ndigits=10, n_samples=len(train_dataset)
         )
-        test_addition_dataset = build_addition_dataset(
-            tokenizer, ndigits=6, n_samples=len(test_dataset)
+        test_addition_dataset = build_additional_dataset(
+            tokenizer, ndigits=10, n_samples=len(test_dataset)
         )
 
         train_dataset = concatenate_datasets([train_dataset, train_addition_dataset])
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     )  # Not implemented yet
 
     parser.add_argument(
-        "--add_addition_dataset",
+        "--add_additional_dataset",
         action="store_true",
         help="Add addition dataset for training",
     )
