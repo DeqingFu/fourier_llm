@@ -169,3 +169,4 @@ sft*/
 number_embedding_vis.py
 *.json
 eval_results/
+continue_pretrain_fourier/

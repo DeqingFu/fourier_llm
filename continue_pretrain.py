@@ -23,6 +23,10 @@ def main(args):
     # Load tokenizer and model
     model_name = args.model_name
     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B")
+    
+    # Configure padding token
+    tokenizer.pad_token = tokenizer.eos_token
+    
 
     model = LlamaForCausalLM.from_pretrained(model_name)
     model = transformer_number_embeddings(
@@ -33,10 +37,22 @@ def main(args):
     )
 
     model.config._name_or_path = "llama_fourier_cnt_pretrain"
+    model.config.pad_token_id = tokenizer.pad_token_id
 
-    # Load dataset directly without chunking
+    # Load dataset directly and preprocess
     if "openwebtext" in args.dataset_name.lower():
         train_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)["train"]
+        
+        def preprocess_function(examples):
+            return tokenizer(examples["text"], truncation=True, max_length=args.max_length)
+        
+        train_dataset = train_dataset.map(
+            preprocess_function,
+            batched=True,
+            num_proc=32,
+            remove_columns=train_dataset.column_names,
+            load_from_cache_file=True
+        )
     else:
         raise ValueError("Dataset not supported yet")
 
@@ -50,7 +66,6 @@ def main(args):
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.dataset_name.split("/")[-1].lower()}'
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
-    args.output_dir += "_" + args.method.replace("-", "_")
     # Define training arguments without evaluation.
     training_args = TrainingArguments(
         output_dir=args.output_dir,
@@ -70,12 +85,13 @@ def main(args):
         push_to_hub=True,
         hub_model_id=hub_name,
         hub_strategy="every_save",
+        remove_unused_columns=False,
     )
 
     trainer = Trainer(
         model=model,
         tokenizer=tokenizer,
-        args=args,
+        args=training_args,
         data_collator=data_collator,
         train_dataset=train_dataset,
     )
