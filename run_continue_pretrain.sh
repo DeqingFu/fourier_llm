@@ -3,11 +3,11 @@
 #SBATCH --gres=gpu:a100:2
 #SBATCH --cpus-per-task=32
 #SBATCH --time=2-0
-#SBATCH --exclude=allegro-adams,glamor-ruby,ink-mia
+#SBATCH --nodelist=allegro-chopin
 source ~/.bashrc
-source activate /home/deqingfu/miniconda3/envs/llm
+source activate /home/deqingfu/miniconda3/envs/fourier
 
-accelerate launch --num_processes=2 continue_pretrain.py \
+accelerate launch --num_processes=2 --main_process_port 0 continue_pretrain.py \
     --max_length 8192 \
     --train_batch_size 1 \
     --learning_rate 2e-5 \

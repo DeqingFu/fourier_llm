@@ -6,23 +6,15 @@ from transformers import (
     AutoModelForCausalLM,
     Trainer,
     TrainingArguments,
-    LlamaConfig,
     LlamaForCausalLM,
-    GenerationConfig,
-    Trainer,
+    DataCollatorForLanguageModeling,
 )
-from datasets import load_dataset, concatenate_datasets
-import itertools
-import math
+from datasets import load_dataset
 import pdb
 import os
-from model import LlamaForCausalLMWithNumberLinear
-import re
 from datetime import datetime
 
-from utils import update_number_embeddings, transformer_number_embeddings
-from addition_dataset import build_additional_dataset
-from copy import deepcopy
+from utils import transformer_number_embeddings
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
@@ -42,27 +34,18 @@ def main(args):
 
     model.config._name_or_path = "llama_fourier_cnt_pretrain"
 
-    # Load and Preprocess dataset for openwebtext with chunking to 8192 tokens.
+    # Load dataset directly without chunking
     if "openwebtext" in args.dataset_name.lower():
-        full_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)[
-            "train"
-        ]
-
-        def chunk_text(example):
-            tokens = tokenizer(
-                [x + "<|end_of_text|>" for x in example["text"]]
-            ).input_ids
-            chunks = []
-            for i in range(0, len(tokens), 8192):
-                chunk_tokens = tokens[i : i + 8192]
-                chunks.append(
-                    {"text": tokenizer.decode(chunk_tokens, skip_special_tokens=False)}
-                )
-            return chunks
-
-        train_dataset = full_dataset.flat_map(chunk_text)
+        train_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)["train"]
     else:
         raise ValueError("Dataset not supported yet")
+
+    # Use DataCollator for padding
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, 
+        mlm=False,
+        pad_to_multiple_of=8
+    )
 
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.dataset_name.split("/")[-1].lower()}'
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
@@ -91,11 +74,10 @@ def main(args):
 
     trainer = Trainer(
         model=model,
-        train_dataset=train_dataset,
-        max_seq_length=args.max_length,
-        dataset_text_field="text",
         tokenizer=tokenizer,
-        args=training_args,
+        args=args,
+        data_collator=data_collator,
+        train_dataset=train_dataset,
     )
 
     # Start training
