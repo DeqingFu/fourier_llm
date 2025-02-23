@@ -1,4 +1,4 @@
-from transformers import LlamaForCausalLM
+from transformers import LlamaForCausalLM, AutoModelForCausalLM
 from model import LlamaForCausalLMWithNumberLinear
 from transformers import AutoTokenizer
 from transformers import pipeline
@@ -20,9 +20,10 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 # model_name = (
 #     "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_19"
 # )
-model_name = "deqing/llama_3.2_1b_fne_transform_gsm8k_2025_01_22_plus_addition_dataset"
+#model_name = "deqing/llama_3.2_1b_fne_transform_gsm8k_2025_01_22_plus_addition_dataset"
+model_name = "deqing/qwen2.5_0.5b_openwebtext_2025_02_20"
 # model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
 # # model = update_number_embeddings(
 # #     model,
 # #     tokenizer,
@@ -30,7 +31,7 @@ tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 # #     fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
 # # )
 # model.set_tokenizer(tokenizer)
-model = LlamaForCausalLM.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name)
 # instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 # model.config = instruct_config
 
@@ -87,7 +88,7 @@ def get_response(prompt):
     with torch.no_grad():
         outputs = pipe(
             messages,
-            max_new_tokens=1024,
+            max_new_tokens=64,
             return_full_text=False,
             temperature=0.0
         )

@@ -48,70 +48,102 @@ def preprocess_function(example, tokenizer, question_column_name, answer_column_
 def main(args):
     # Load tokenizer and model
     model_name = args.model_name
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
-    tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
-    tokenizer.padding_side = (
-        "right"  # padding to right (otherwise SFTTrainer shows warning)
-    )
-
-    if args.method == "fne-full":
-        config = LlamaConfig.from_pretrained(model_name)
-
-        # Step 2: Initialize the custom model
-        model = LlamaForCausalLMWithNumberLinear(config)
-        model.set_tokenizer(tokenizer)
-
-        # Step 3: Load weights from the pretrained model
-        original_model = LlamaForCausalLM.from_pretrained(model_name)
-        model.load_state_dict(original_model.state_dict(), strict=False)
-        model = update_number_embeddings(
-            model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+    if "llama-3" in model_name.lower():
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+        tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
+        tokenizer.padding_side = (
+            "right"  # padding to right (otherwise SFTTrainer shows warning)
         )
-    elif args.method == "fne-naive":
-        model = LlamaForCausalLM.from_pretrained(model_name)
-        model = update_number_embeddings(
-            model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+    elif "qwen2.5" in model_name.lower():
+        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
+        tokenizer.add_special_tokens({"pad_token": "<|endoftext|>"})
+        tokenizer.padding_side = (
+            "right"  # padding to right (otherwise SFTTrainer shows warning)
         )
-    elif args.method == "fne-transform":
-        model = LlamaForCausalLM.from_pretrained(model_name)
+
+    # if args.method == "fne-full":
+    #     config = LlamaConfig.from_pretrained(model_name)
+
+    #     # Step 2: Initialize the custom model
+    #     model = LlamaForCausalLMWithNumberLinear(config)
+    #     model.set_tokenizer(tokenizer)
+
+    #     # Step 3: Load weights from the pretrained model
+    #     original_model = AutoModelForCausalLM.from_pretrained(model_name)
+    #     model.load_state_dict(original_model.state_dict(), strict=False)
+    #     model = update_number_embeddings(
+    #         model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+    #     )
+    # elif args.method == "fne-naive":
+    #     model = AutoModelForCausalLM.from_pretrained(model_name)
+    #     model = update_number_embeddings(
+    #         model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
+    #     )
+    # elif args.method == "fne-transform":
+    #     model = AutoModelForCausalLM.from_pretrained(model_name)
+    #     model = transformer_number_embeddings(
+    #         model,
+    #         tokenizer,
+    #         verbose=True,
+    #         fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+    #     )
+    # elif args.method == "fne-merge":
+    #     model = AutoModelForCausalLM.from_pretrained(model_name)
+    #     orginal_token_embedding_weights = model.model.embed_tokens.weight.data
+    #     model = update_number_embeddings(
+    #         model,
+    #         tokenizer,
+    #         verbose=True,
+    #         fourier_basis=[10, 100, 1000],
+    #     )
+    #     new_token_embedding_weights = (
+    #         orginal_token_embedding_weights + model.model.embed_tokens.weight.data
+    #     ) / 2
+    #     model.model.embed_tokens.weight.data = new_token_embedding_weights
+    # elif args.method == "fne-prime":
+    #     model = AutoModelForCausalLM.from_pretrained(model_name)
+    #     model = update_number_embeddings(model, tokenizer, verbose=True)
+    # elif args.method == "vanilla":
+    #     model = AutoModelForCausalLM.from_pretrained(model_name)
+    # else:
+    #     raise ValueError(f"Method {args.method} not implemented yet")
+
+    # for param in model.model.embed_tokens.parameters():
+    #     param.requires_grad = False
+
+    if args.method == "fne-transform":
+        model = AutoModelForCausalLM.from_pretrained(model_name)
         model = transformer_number_embeddings(
             model,
             tokenizer,
             verbose=True,
             fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
         )
-    elif args.method == "fne-merge":
-        model = LlamaForCausalLM.from_pretrained(model_name)
-        orginal_token_embedding_weights = model.model.embed_tokens.weight.data
-        model = update_number_embeddings(
-            model,
-            tokenizer,
-            verbose=True,
-            fourier_basis=[10, 100, 1000],
-        )
-        new_token_embedding_weights = (
-            orginal_token_embedding_weights + model.model.embed_tokens.weight.data
-        ) / 2
-        model.model.embed_tokens.weight.data = new_token_embedding_weights
-    elif args.method == "fne-prime":
-        model = LlamaForCausalLM.from_pretrained(model_name)
-        model = update_number_embeddings(model, tokenizer, verbose=True)
     elif args.method == "vanilla":
-        model = LlamaForCausalLM.from_pretrained(model_name)
+        model = AutoModelForCausalLM.from_pretrained(model_name)
     else:
         raise ValueError(f"Method {args.method} not implemented yet")
 
-    # for param in model.model.embed_tokens.parameters():
-    #     param.requires_grad = False
-    instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
-    model.config = instruct_config
-    generation_config = GenerationConfig.from_pretrained(
-        "meta-llama/Llama-3.2-1B-Instruct"
-    )
-    model.generation_config = generation_config
-    model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
+    if "llama-3" in model_name.lower():
+        instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
+        model.config = instruct_config
+        generation_config = GenerationConfig.from_pretrained(
+            "meta-llama/Llama-3.2-1B-Instruct"
+        )
+        model.generation_config = generation_config
+        model.config.pad_token_id = tokenizer.pad_token_id  # updating model config
 
-    model.config._name_or_path = "llama_fourier"
+        model.config._name_or_path = "llama_fourier"
+    elif "qwen2.5" in model_name.lower():
+        instruct_config = AutoConfig.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
+        model.config = instruct_config
+        generation_config = GenerationConfig.from_pretrained(
+            "Qwen/Qwen2.5-0.5B-Instruct"
+        )
+        model.generation_config = generation_config
+        model.config.pad_token_id = tokenizer.pad_token_id
+
+        model.config._name_or_path = "qwen_fourier"
 
     # Load and Preprocess dataset
     if "gsm8k" in args.dataset_name:
@@ -191,8 +223,7 @@ def main(args):
         model=model,
         train_dataset=train_dataset,
         eval_dataset=test_dataset,
-        max_seq_length=args.max_length,
-        dataset_text_field="text",
+        formatting_func=lambda x: x["text"],  # Replace dataset_text_field with formatting_func
         tokenizer=tokenizer,
         args=training_args,
         packing=False,

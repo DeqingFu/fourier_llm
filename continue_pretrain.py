@@ -7,6 +7,7 @@ from transformers import (
     Trainer,
     TrainingArguments,
     LlamaForCausalLM,
+    AutoModelForCausalLM,
     DataCollatorForLanguageModeling,
 )
 from datasets import load_dataset
@@ -22,13 +23,12 @@ os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 def main(args):
     # Load tokenizer and model
     model_name = args.model_name
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B")
-    
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+
     # Configure padding token
     tokenizer.pad_token = tokenizer.eos_token
-    
 
-    model = LlamaForCausalLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name)
     model = transformer_number_embeddings(
         model,
         tokenizer,
@@ -36,31 +36,53 @@ def main(args):
         fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
     )
 
-    model.config._name_or_path = "llama_fourier_cnt_pretrain"
+    model.config._name_or_path = "fourier_cnt_pretrain"
     model.config.pad_token_id = tokenizer.pad_token_id
 
-    # Load dataset directly and preprocess
+    # Load dataset directly.
     if "openwebtext" in args.dataset_name.lower():
-        train_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)["train"]
-        
-        def preprocess_function(examples):
-            return tokenizer(examples["text"], truncation=True, max_length=args.max_length)
-        
-        train_dataset = train_dataset.map(
-            preprocess_function,
+        raw_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)[
+            "train"
+        ]
+
+        # Tokenize without truncation to allow concatenation.
+        def tokenize_function(examples):
+            return tokenizer(examples["text"], add_special_tokens=True)
+
+        tokenized_dataset = raw_dataset.map(
+            tokenize_function,
             batched=True,
             num_proc=32,
-            remove_columns=train_dataset.column_names,
-            load_from_cache_file=True
+            remove_columns=raw_dataset.column_names,
+        )
+
+        # Group texts into chunks of args.max_length tokens.
+        def group_texts(examples):
+            concatenated = {}
+            for key in examples.keys():
+                concatenated[key] = sum(examples[key], [])
+            total_length = len(concatenated[list(examples.keys())[0]])
+            # Drop the last chunk if it's smaller than max_length.
+            total_length = (total_length // args.max_length) * args.max_length
+            result = {}
+            for key in examples.keys():
+                result[key] = [
+                    concatenated[key][i : i + args.max_length]
+                    for i in range(0, total_length, args.max_length)
+                ]
+            return result
+
+        train_dataset = tokenized_dataset.map(
+            group_texts,
+            batched=True,
+            num_proc=32,
         )
     else:
         raise ValueError("Dataset not supported yet")
 
     # Use DataCollator for padding
     data_collator = DataCollatorForLanguageModeling(
-        tokenizer=tokenizer, 
-        mlm=False,
-        pad_to_multiple_of=8
+        tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
     )
 
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.dataset_name.split("/")[-1].lower()}'
@@ -78,7 +100,7 @@ def main(args):
         per_device_train_batch_size=args.train_batch_size,
         warmup_steps=args.warmup_steps,
         weight_decay=args.weight_decay,
-        fp16=args.fp16,
+        bf16=True,
         logging_dir=args.logging_dir,
         report_to="wandb",
         gradient_accumulation_steps=args.gradient_accumulation_steps,
