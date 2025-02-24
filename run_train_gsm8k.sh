@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -o ./logs/slurm-%j.out # STDOUT
-#SBATCH --gres=gpu:a100:1
+#SBATCH --gres=gpu:a6000:1
 #SBATCH --cpus-per-task=32
 #SBATCH --time=2-0
 #SBATCH --exclude=allegro-adams,glamor-ruby,lime-mint
@@ -10,7 +10,7 @@ source activate /home/deqingfu/miniconda3/envs/fourier
 # METHOD="vanilla"
 # MODEL_NAME="Qwen/Qwen2.5-0.5B"
 METHOD="fne-transform"
-MODEL_NAME="deqing/qwen2.5_0.5b_openwebtext_2025_02_20"
+MODEL_NAME="deqing/llama_3.2_1b_openwebtext_2025_02_23"
 python train.py \
     --max_length 4096 \
     --train_batch_size 1 \

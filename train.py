@@ -46,71 +46,23 @@ def preprocess_function(example, tokenizer, question_column_name, answer_column_
 
 
 def main(args):
-    # Load tokenizer and model
+    # Load tokenizer first
     model_name = args.model_name
-    if "llama-3" in model_name.lower():
+    if "llama" in model_name.lower():
         tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
         tokenizer.add_special_tokens({"pad_token": "<|end_of_text|>"})
-        tokenizer.padding_side = (
-            "right"  # padding to right (otherwise SFTTrainer shows warning)
-        )
-    elif "qwen2.5" in model_name.lower():
+        tokenizer.padding_side = "right"
+    elif "qwen" in model_name.lower():
         tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B-Instruct")
         tokenizer.add_special_tokens({"pad_token": "<|endoftext|>"})
-        tokenizer.padding_side = (
-            "right"  # padding to right (otherwise SFTTrainer shows warning)
-        )
+        tokenizer.padding_side = "right"
+    else:
+        # Default tokenizer loading for other models
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "right"
 
-    # if args.method == "fne-full":
-    #     config = LlamaConfig.from_pretrained(model_name)
-
-    #     # Step 2: Initialize the custom model
-    #     model = LlamaForCausalLMWithNumberLinear(config)
-    #     model.set_tokenizer(tokenizer)
-
-    #     # Step 3: Load weights from the pretrained model
-    #     original_model = AutoModelForCausalLM.from_pretrained(model_name)
-    #     model.load_state_dict(original_model.state_dict(), strict=False)
-    #     model = update_number_embeddings(
-    #         model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
-    #     )
-    # elif args.method == "fne-naive":
-    #     model = AutoModelForCausalLM.from_pretrained(model_name)
-    #     model = update_number_embeddings(
-    #         model, tokenizer, verbose=True, fourier_basis=[10, 100, 1000]
-    #     )
-    # elif args.method == "fne-transform":
-    #     model = AutoModelForCausalLM.from_pretrained(model_name)
-    #     model = transformer_number_embeddings(
-    #         model,
-    #         tokenizer,
-    #         verbose=True,
-    #         fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
-    #     )
-    # elif args.method == "fne-merge":
-    #     model = AutoModelForCausalLM.from_pretrained(model_name)
-    #     orginal_token_embedding_weights = model.model.embed_tokens.weight.data
-    #     model = update_number_embeddings(
-    #         model,
-    #         tokenizer,
-    #         verbose=True,
-    #         fourier_basis=[10, 100, 1000],
-    #     )
-    #     new_token_embedding_weights = (
-    #         orginal_token_embedding_weights + model.model.embed_tokens.weight.data
-    #     ) / 2
-    #     model.model.embed_tokens.weight.data = new_token_embedding_weights
-    # elif args.method == "fne-prime":
-    #     model = AutoModelForCausalLM.from_pretrained(model_name)
-    #     model = update_number_embeddings(model, tokenizer, verbose=True)
-    # elif args.method == "vanilla":
-    #     model = AutoModelForCausalLM.from_pretrained(model_name)
-    # else:
-    #     raise ValueError(f"Method {args.method} not implemented yet")
-
-    # for param in model.model.embed_tokens.parameters():
-    #     param.requires_grad = False
-
+    # Then load and modify the model
     if args.method == "fne-transform":
         model = AutoModelForCausalLM.from_pretrained(model_name)
         model = transformer_number_embeddings(
