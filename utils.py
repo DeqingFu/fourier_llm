@@ -46,6 +46,37 @@ def get_fourier_embeddings(num: int, fourier_basis: List[int]):
     return fourier_embeddings
 
 
+def freeze_number_embedding(
+    model, tokenizer, verbose=False, max_single_number=10_000
+):
+
+    # Identify tokens corresponding to numbers that are single tokens
+    single_token_id_to_number = {}
+    for number in range(max_single_number + 1):  # Check numbers 0-9
+        token = str(number)
+        tokenized = tokenizer(token, add_special_tokens=False).input_ids
+        if len(tokenized) == 1:  # Single token
+            single_token_id_to_number[tokenized[0]] = number
+        tokenized = tokenizer(f" {token}", add_special_tokens=False).input_ids
+        if len(tokenized) == 1:  # Single token
+            single_token_id_to_number[tokenized[0]] = number
+    if verbose:
+        print(
+            f"Single-token numbers: {[tokenizer.decode([t]) for t in single_token_id_to_number.keys()]}"
+        )
+
+    freeze_indices = list(single_token_id_to_number.keys())
+
+    def freeze_embedding_gradients(grad):
+        # Set the gradients of frozen rows to zero
+        grad[freeze_indices] = 0
+        return grad
+
+    model.model.embed_tokens.weight.register_hook(freeze_embedding_gradients)
+
+    return model
+
+
 def transformer_number_embeddings(
     model, tokenizer, verbose=False, max_single_number=10_000, fourier_basis=None
 ):

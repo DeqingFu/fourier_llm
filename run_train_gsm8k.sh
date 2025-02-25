@@ -3,13 +3,13 @@
 #SBATCH --gres=gpu:a6000:1
 #SBATCH --cpus-per-task=32
 #SBATCH --time=2-0
-#SBATCH --exclude=allegro-adams,glamor-ruby,lime-mint
+#SBATCH --exclude=ink-mia,lime-mint
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/fourier
 
 # METHOD="vanilla"
 # MODEL_NAME="Qwen/Qwen2.5-0.5B"
-METHOD="fne-transform"
+METHOD="fne"
 MODEL_NAME="deqing/llama_3.2_1b_openwebtext_2025_02_23"
 python train.py \
     --max_length 4096 \

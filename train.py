@@ -20,7 +20,7 @@ from model import LlamaForCausalLMWithNumberLinear
 import re
 from datetime import datetime
 
-from utils import update_number_embeddings, transformer_number_embeddings
+from utils import update_number_embeddings, transformer_number_embeddings, freeze_number_embedding
 from addition_dataset import build_additional_dataset
 from copy import deepcopy
 
@@ -63,20 +63,21 @@ def main(args):
         tokenizer.padding_side = "right"
 
     # Then load and modify the model
-    if args.method == "fne-transform":
+    if args.method == "fne":
         model = AutoModelForCausalLM.from_pretrained(model_name)
-        model = transformer_number_embeddings(
-            model,
-            tokenizer,
-            verbose=True,
-            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
-        )
+        # model = transformer_number_embeddings(
+        #     model,
+        #     tokenizer,
+        #     verbose=True,
+        #     fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+        # )
+        model = freeze_number_embedding(model, tokenizer, verbose=True)
     elif args.method == "vanilla":
         model = AutoModelForCausalLM.from_pretrained(model_name)
     else:
         raise ValueError(f"Method {args.method} not implemented yet")
 
-    if "llama-3" in model_name.lower():
+    if "llama" in model_name.lower():
         instruct_config = AutoConfig.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
         model.config = instruct_config
         generation_config = GenerationConfig.from_pretrained(
@@ -178,7 +179,6 @@ def main(args):
         formatting_func=lambda x: x["text"],  # Replace dataset_text_field with formatting_func
         tokenizer=tokenizer,
         args=training_args,
-        packing=False,
     )
 
     # Start training

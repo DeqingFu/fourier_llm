@@ -21,9 +21,9 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 #     "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_19"
 # )
 #model_name = "deqing/llama_3.2_1b_fne_transform_gsm8k_2025_01_22_plus_addition_dataset"
-model_name = "deqing/qwen2.5_0.5b_openwebtext_2025_02_20"
+model_name = "sft-gsm8k_fne/checkpoint-1000"
 # model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 # # model = update_number_embeddings(
 # #     model,
 # #     tokenizer,
@@ -80,7 +80,6 @@ def get_response(prompt):
     #     {"role": "assistant", "content": "Michael started with 58 golf balls. After losing 23 on tuesday, he had 58 - 23 = 35. After losing 2 more, he had 35 - 2 = 33 golf balls. The final answer is 33."},
     #     {"role": "user", "content": "Given the following problem, reason and give a final answer to the problem.\nProblem: Olivia has $23. She bought five bagels for $3 each. How much money does she have left?\nYour response should end with \"The final answer is [answer]\" where [answer] is the response to the problem."},
     #     {"role": "assistant", "content": "Olivia had 23 dollars. 5 bagels for 3 dollars each will be 5 x 3 = 15 dollars. So she has 23 - 15 dollars left. 23 - 15 is 8. The final answer is 8."},
-    #     {"role": "user", "content": "Given the following problem, reason and give a final answer to the problem.\nProblem: Milly needs to return a book she decided was really boring. The book weighs 4 pounds, cost $32, and needs to be returned to a distribution center 20 miles away. If the shipping company charges $0.35 per pound plus $0.08 per mile, and Amazon will only refund 75% of the book's purchase price, how much money will Milly lose?\nYour response should end with \"The final answer is [answer]\" where [answer] is the response to the problem."},
     #     {"role": "user", "content": f"Given the following problem, reason and give a final answer to the problem.\nProblem: {prompt}\nYour response should end with \"The final answer is [answer]\" where [answer] is the response to the problem."}
     # ]
     messages = [{"role": "user", "content": prompt}]
@@ -88,7 +87,7 @@ def get_response(prompt):
     with torch.no_grad():
         outputs = pipe(
             messages,
-            max_new_tokens=64,
+            max_new_tokens=256,
             return_full_text=False,
             temperature=0.0
         )
