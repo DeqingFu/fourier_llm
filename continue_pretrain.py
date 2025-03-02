@@ -16,6 +16,11 @@ import os
 from datetime import datetime
 
 from utils import transformer_number_embeddings
+from peft import (
+    LoraConfig,
+    get_peft_model,
+    TaskType,
+)
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
@@ -38,6 +43,20 @@ def main(args):
 
     model.config._name_or_path = "fourier_cnt_pretrain"
     model.config.pad_token_id = tokenizer.pad_token_id
+
+    # Configure LoRA
+    lora_config = LoraConfig(
+        r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        target_modules="all-linear",
+        lora_dropout=args.lora_dropout,
+        bias="none",
+        task_type=TaskType.CAUSAL_LM,
+    )
+
+    # Prepare model for LoRA training
+    model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
 
     # Load dataset directly.
     if "openwebtext" in args.dataset_name.lower():
@@ -199,6 +218,26 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--fp16", action="store_true", help="Use FP16 mixed precision training"
+    )
+
+    # Add LoRA specific arguments
+    parser.add_argument(
+        "--lora_r",
+        type=int,
+        default=8,
+        help="LoRA attention dimension",
+    )
+    parser.add_argument(
+        "--lora_alpha",
+        type=int,
+        default=16,
+        help="LoRA alpha scaling factor",
+    )
+    parser.add_argument(
+        "--lora_dropout",
+        type=float,
+        default=0.05,
+        help="LoRA dropout value",
     )
     args = parser.parse_args()
     main(args)

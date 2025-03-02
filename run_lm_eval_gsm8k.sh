@@ -7,9 +7,9 @@
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/llm
 
-MODEL_NAME="deqing/llama_3.2_1b_vanilla_gsm8k_2025_01_21"
+MODEL_NAME="deqing/llama_3.2_1b_openwebtext_2025_02_23"
 
-accelerate launch -m lm_eval \
+accelerate launch --config_file lm_eval_config.yaml -m lm_eval \
     --model hf \
     --model_args pretrained=$MODEL_NAME,dtype=bfloat16 \
     --apply_chat_template \
