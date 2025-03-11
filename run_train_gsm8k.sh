@@ -3,14 +3,14 @@
 #SBATCH --gres=gpu:a6000:1
 #SBATCH --cpus-per-task=32
 #SBATCH --time=2-0
-#SBATCH --exclude=ink-mia,lime-mint
+#SBATCH --nodelist=dill-sage
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/fourier
 
 # METHOD="vanilla"
 # MODEL_NAME="Qwen/Qwen2.5-0.5B"
 METHOD="fne"
-MODEL_NAME="deqing/llama_3.2_1b_openwebtext_2025_02_23"
+MODEL_NAME="deqing/llama_3.2_1b_openwebtext_2025_03_02_converted"
 python train.py \
     --max_length 4096 \
     --train_batch_size 1 \
@@ -22,7 +22,4 @@ python train.py \
     --dataset_name openai/gsm8k \
     --output_dir sft-gsm8k \
     --method ${METHOD} \
-    --model_name  ${MODEL_NAME} \
-    # --method fne-transform \
-    # --model_name "deqing/qwen2.5_0.5b_openwebtext_2025_02_20" \
-#    --add_additional_dataset \
+    --model_name  ${MODEL_NAME}

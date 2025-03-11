@@ -20,7 +20,11 @@ from model import LlamaForCausalLMWithNumberLinear
 import re
 from datetime import datetime
 
-from utils import update_number_embeddings, transformer_number_embeddings, freeze_number_embedding
+from utils import (
+    update_number_embeddings,
+    transformer_number_embeddings,
+    freeze_number_embedding,
+)
 from addition_dataset import build_additional_dataset
 from copy import deepcopy
 
@@ -65,12 +69,9 @@ def main(args):
     # Then load and modify the model
     if args.method == "fne":
         model = AutoModelForCausalLM.from_pretrained(model_name)
-        # model = transformer_number_embeddings(
-        #     model,
-        #     tokenizer,
-        #     verbose=True,
-        #     fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
-        # )
+        # Enable gradients
+        for param in model.parameters():
+            param.requires_grad = True
         model = freeze_number_embedding(model, tokenizer, verbose=True)
     elif args.method == "vanilla":
         model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -176,7 +177,9 @@ def main(args):
         model=model,
         train_dataset=train_dataset,
         eval_dataset=test_dataset,
-        formatting_func=lambda x: x["text"],  # Replace dataset_text_field with formatting_func
+        formatting_func=lambda x: x[
+            "text"
+        ],  # Replace dataset_text_field with formatting_func
         tokenizer=tokenizer,
         args=training_args,
     )
