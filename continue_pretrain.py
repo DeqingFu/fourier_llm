@@ -60,16 +60,24 @@ def main(args):
     model.print_trainable_parameters()
 
     # Load dataset directly.
-    if "openwebtext" in args.dataset_name.lower() or "megamath" in args.dataset_name.lower():
+    if (
+        "openwebtext" in args.dataset_name.lower()
+        or "megamath" in args.dataset_name.lower()
+    ):
+        # Create cache directory if it doesn't exist
+        os.makedirs("dataset_cache", exist_ok=True)
+        cache_dir = "dataset_cache"
+
         if "openwebtext" in args.dataset_name.lower():
-            raw_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)[
-                "train"
-            ]
+            raw_dataset = load_dataset(
+                "openwebtext", num_proc=32, trust_remote_code=True
+            )["train"]
+            dataset_cache_prefix = "openwebtext"
         if "megamath" in args.dataset_name.lower():
             local_dir = snapshot_download(
                 repo_id="LLM360/MegaMath",
                 repo_type="dataset",
-                allow_patterns=["megamath-web-pro/*"]
+                allow_patterns=["megamath-web-pro/*"],
             )
 
             # Construct the path to the specific dataset directory
@@ -79,16 +87,21 @@ def main(args):
             dataset = load_dataset(dataset_path)
             # Load train split
             raw_dataset = dataset["train"]
+            dataset_cache_prefix = "megamath"
 
         # Tokenize without truncation to allow concatenation.
         def tokenize_function(examples):
             return tokenizer(examples["text"], add_special_tokens=True)
 
+        tokenized_cache_file = os.path.join(
+            cache_dir, f"{dataset_cache_prefix}_tokenized.arrow"
+        )
         tokenized_dataset = raw_dataset.map(
             tokenize_function,
             batched=True,
             num_proc=32,
             remove_columns=raw_dataset.column_names,
+            cache_file_name=tokenized_cache_file,
         )
 
         # Group texts into chunks of args.max_length tokens.
@@ -107,10 +120,14 @@ def main(args):
                 ]
             return result
 
+        grouped_cache_file = os.path.join(
+            cache_dir, f"{dataset_cache_prefix}_grouped_{args.max_length}.arrow"
+        )
         train_dataset = tokenized_dataset.map(
             group_texts,
             batched=True,
             num_proc=32,
+            cache_file_name=grouped_cache_file,
         )
     else:
         raise ValueError("Dataset not supported yet")
@@ -126,7 +143,7 @@ def main(args):
     # Define training arguments without evaluation.
     training_args = TrainingArguments(
         output_dir=args.output_dir,
-        evaluation_strategy="no",
+        eval_strategy="no",
         logging_steps=args.logging_steps,
         save_steps=args.save_steps,
         save_total_limit=args.save_total_limit,

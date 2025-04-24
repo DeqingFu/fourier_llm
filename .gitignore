@@ -171,3 +171,4 @@ number_embedding_vis.py
 eval_results/
 continue_pretrain_fourier/
 hf_diff.py
+*cache/

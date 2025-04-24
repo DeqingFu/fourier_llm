@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH -o ./logs/slurm-%j.out # STDOUT
 #SBATCH --cpus-per-task=32
-#SBATCH --time=3-0
+#SBATCH --time=6-0
 #SBATCH --exclude=glamor-ruby
-#SBATCH --gres=gpu:a6000:4
+#SBATCH --gres=gpu:a6000:6
 
 GPU_TYPE="a6000"
-NUM_GPUS=4
+NUM_GPUS=6
 GPU_CONFIG="$GPU_TYPE:$NUM_GPUS"
 
 # Set batch size and GPU configuration based on GPU type
@@ -32,6 +32,8 @@ echo "Using MASTER_PORT=$MASTER_PORT"
 accelerate launch --num_processes=$NUM_GPUS \
     --main_process_port $MASTER_PORT \
     continue_pretrain.py \
+    --lora_r 32 \
+    --lora_alpha 64 \
     --max_length 4096 \
     --train_batch_size $BATCH_SIZE \
     --learning_rate 2e-5 \
