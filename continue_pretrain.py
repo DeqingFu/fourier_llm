@@ -21,6 +21,7 @@ from peft import (
     get_peft_model,
     TaskType,
 )
+from huggingface_hub import snapshot_download
 
 os.environ["WANDB_PROJECT"] = "fourier_number_embedding"
 
@@ -59,10 +60,20 @@ def main(args):
     model.print_trainable_parameters()
 
     # Load dataset directly.
-    if "openwebtext" in args.dataset_name.lower():
-        raw_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)[
-            "train"
-        ]
+    if "openwebtext" in args.dataset_name.lower() or "megamath" in args.dataset_name.lower():
+        if "openwebtext" in args.dataset_name.lower():
+            raw_dataset = load_dataset("openwebtext", num_proc=32, trust_remote_code=True)[
+                "train"
+            ]
+        if "megamath" in args.dataset_name.lower():
+            local_dir = snapshot_download(
+                repo_id="LLM360/MegaMath",
+                repo_type="dataset",
+                allow_patterns=["megamath-web-pro/*"],
+            )
+            dataset_path = os.path.join(local_dir, "megamath-web-pro")
+            # Load train split
+            raw_dataset = load_dataset(dataset_path, num_proc=32, trust_remote_code=True)["train"]
 
         # Tokenize without truncation to allow concatenation.
         def tokenize_function(examples):

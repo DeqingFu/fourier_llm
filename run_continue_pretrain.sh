@@ -19,6 +19,8 @@ else
     exit 1
 fi
 
+DATASET_NAME="megamath"
+
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/fourier
 
@@ -30,4 +32,6 @@ accelerate launch --num_processes=$NUM_GPUS continue_pretrain.py \
     --num_train_epochs 1 \
     --save_steps 1000 \
     --eval_steps 1000 \
-    --model_name "meta-llama/Llama-3.2-1B"
+    --model_name "meta-llama/Llama-3.2-1B" \
+    --dataset_name $DATASET_NAME \
+    --output_dir "continual_pretrain_fourier_$DATASET_NAME" 
