@@ -2,7 +2,7 @@
 #SBATCH -o ./logs/slurm-%j.out # STDOUT
 #SBATCH --cpus-per-task=32
 #SBATCH --time=3-0
-#SBATCH --exclude=ink-mia,lime-mint
+#SBATCH --exclude=glamor-ruby
 #SBATCH --gres=gpu:a6000:4
 
 GPU_TYPE="a6000"
@@ -24,7 +24,14 @@ DATASET_NAME="megamath"
 source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/fourier
 
-accelerate launch --num_processes=$NUM_GPUS continue_pretrain.py \
+# Randomly select a free port for accelerate
+MASTER_PORT=$(shuf -i 10000-65000 -n 1)
+export MASTER_PORT
+echo "Using MASTER_PORT=$MASTER_PORT"
+
+accelerate launch --num_processes=$NUM_GPUS \
+    --main_process_port $MASTER_PORT \
+    continue_pretrain.py \
     --max_length 4096 \
     --train_batch_size $BATCH_SIZE \
     --learning_rate 2e-5 \
@@ -34,4 +41,4 @@ accelerate launch --num_processes=$NUM_GPUS continue_pretrain.py \
     --eval_steps 1000 \
     --model_name "meta-llama/Llama-3.2-1B" \
     --dataset_name $DATASET_NAME \
-    --output_dir "continual_pretrain_fourier_$DATASET_NAME" 
+    --output_dir "continual_pretrain_fourier_$DATASET_NAME"

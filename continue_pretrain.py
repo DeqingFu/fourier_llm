@@ -69,11 +69,16 @@ def main(args):
             local_dir = snapshot_download(
                 repo_id="LLM360/MegaMath",
                 repo_type="dataset",
-                allow_patterns=["megamath-web-pro/*"],
+                allow_patterns=["megamath-web-pro/*"]
             )
+
+            # Construct the path to the specific dataset directory
             dataset_path = os.path.join(local_dir, "megamath-web-pro")
+            print(local_dir)
+            # Load the dataset
+            dataset = load_dataset(dataset_path)
             # Load train split
-            raw_dataset = load_dataset(dataset_path, num_proc=32, trust_remote_code=True)["train"]
+            raw_dataset = dataset["train"]
 
         # Tokenize without truncation to allow concatenation.
         def tokenize_function(examples):
