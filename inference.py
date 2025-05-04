@@ -21,7 +21,7 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 #     "deqing/llama_3.2_1b_fne_prime_openmathinstruct_2_2025_01_19"
 # )
 #model_name = "deqing/llama_3.2_1b_fne_transform_gsm8k_2025_01_22_plus_addition_dataset"
-model_name = "sft-gsm8k_fne/checkpoint-2802"
+model_name = "deqing/llama_3.2_1b_megamath_2025_04_25_converted"
 # model = LlamaForCausalLMWithNumberLinear.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B-Instruct")
 # # model = update_number_embeddings(
@@ -119,7 +119,15 @@ if __name__ == "__main__":
     #         f"Addition accuracy: {sum(all_acc) / len(all_acc) * 100:.2f}% with {np.mean([x%10==0 for x in diff])*100:.2f}% errors in multiples of 10"
     #     )
 
+    # while True:
+    #     prompt = input("User: ")
+    #     response = get_response(prompt)
+    #     print("Model:", response)
     while True:
         prompt = input("User: ")
-        response = get_response(prompt)
+        response = outputs = pipe(
+            prompt,
+            max_new_tokens=256,
+            return_full_text=False,
+        )
         print("Model:", response)

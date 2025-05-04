@@ -172,3 +172,5 @@ eval_results/
 continue_pretrain_fourier/
 hf_diff.py
 *cache/
+eval_results*/
+continual_pretrain_fourier*/

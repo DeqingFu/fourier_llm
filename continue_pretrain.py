@@ -45,19 +45,22 @@ def main(args):
     model.config._name_or_path = "fourier_cnt_pretrain"
     model.config.pad_token_id = tokenizer.pad_token_id
 
-    # Configure LoRA
-    lora_config = LoraConfig(
-        r=args.lora_r,
-        lora_alpha=args.lora_alpha,
-        target_modules="all-linear",
-        lora_dropout=args.lora_dropout,
-        bias="none",
-        task_type=TaskType.CAUSAL_LM,
-    )
+    if args.use_peft:
+        # Configure LoRA
+        lora_config = LoraConfig(
+            r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            target_modules="all-linear",
+            lora_dropout=args.lora_dropout,
+            bias="none",
+            task_type=TaskType.CAUSAL_LM,
+        )
 
-    # Prepare model for LoRA training
-    model = get_peft_model(model, lora_config)
-    model.print_trainable_parameters()
+        # Prepare model for LoRA training
+        model = get_peft_model(model, lora_config)
+        model.print_trainable_parameters()
+    else:
+        print("Performing full fine-tuning.")
 
     # Load dataset directly.
     if (
@@ -138,6 +141,7 @@ def main(args):
     )
 
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.dataset_name.split("/")[-1].lower()}'
+    hub_name += "_peft" if args.use_peft else "_full"
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
     # Define training arguments without evaluation.
@@ -171,7 +175,12 @@ def main(args):
     )
 
     # Start training
-    trainer.train()
+    # The Trainer automatically finds the latest checkpoint in output_dir if resume_from_checkpoint=True
+    try:
+        trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    except:
+        print("No checkpoint found, starting from scratch.")
+        trainer.train()
     trainer.push_to_hub()
 
     # Save the final model
@@ -251,6 +260,17 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--fp16", action="store_true", help="Use FP16 mixed precision training"
+    )
+    parser.add_argument(
+        "--use_peft",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Whether to use PEFT (LoRA) for training.",
+    )
+    parser.add_argument(
+        "--resume_from_checkpoint",
+        action="store_true",
+        help="Whether to resume training from the latest checkpoint in output_dir.",
     )
 
     # Add LoRA specific arguments
