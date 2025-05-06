@@ -45,5 +45,4 @@ accelerate launch --num_processes=$NUM_GPUS \
     --model_name "meta-llama/Llama-3.2-1B" \
     --dataset_name $DATASET_NAME \
     --output_dir "continual_pretrain_$DATASET_NAME" \
-    --resume_from_checkpoint \
     --ablate \

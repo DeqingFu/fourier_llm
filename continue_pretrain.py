@@ -44,7 +44,7 @@ def main(args):
             verbose=True,
             fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
         )
-        
+
         model.config._name_or_path = "fourier_cnt_pretrain"
     else:
         model.config._name_or_path = "cnt_pretrain"
@@ -146,7 +146,7 @@ def main(args):
     )
     
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.dataset_name.split("/")[-1].lower()}'
-    if args.ablation:
+    if args.ablate:
         hub_name += "_ablation"
     else:
         hub_name += "_fourier"

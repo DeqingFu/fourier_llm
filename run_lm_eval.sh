@@ -8,14 +8,15 @@ source ~/.bashrc
 source activate /home/deqingfu/miniconda3/envs/fourier
 export TRITON_CACHE_DIR="/tmp/triton_cache"
 
-#CKPT="32968"
+CKPT="3000"
 #MODEL_NAME="continual_pretrain_fourier_megamath/checkpoint-$CKPT"
-MODEL_NAME="meta-llama/Llama-3.2-1B"
+MODEL_NAME="continual_pretrain_megamath/checkpoint-$CKPT"
+#MODEL_NAME="meta-llama/Llama-3.2-1B"
 #MODEL_NAME="LLM360/MegaMath-Llama-3.2-1B"
 
 #TASKS="gsm8k_cot,arithmetic,asdiv,mathqa,minerva_math"
-#TASKS="gsm8k_cot,arithmetic,asdiv,mathqa,minerva_math,mmlu"
-TASKS="minerva_math"
+TASKS="gsm8k_cot,arithmetic,asdiv,mathqa,minerva_math,mmlu"
+#TASKS="minerva_math"
 accelerate launch --config_file lm_eval_config.yaml -m lm_eval \
     --model hf \
     --model_args "pretrained=$MODEL_NAME" \
