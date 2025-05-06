@@ -33,16 +33,21 @@ def main(args):
 
     # Configure padding token
     tokenizer.pad_token = tokenizer.eos_token
-
     model = AutoModelForCausalLM.from_pretrained(model_name)
-    model = transformer_number_embeddings(
-        model,
-        tokenizer,
-        verbose=True,
-        fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
-    )
 
-    model.config._name_or_path = "fourier_cnt_pretrain"
+    if not args.ablate:
+        # Fourier Transformer
+        # Register NoGrad Hook on Number Embedding
+        model = transformer_number_embeddings(
+            model,
+            tokenizer,
+            verbose=True,
+            fourier_basis=[2, 5, 10, 20, 50, 100, 200, 500, 1000],
+        )
+        
+        model.config._name_or_path = "fourier_cnt_pretrain"
+    else:
+        model.config._name_or_path = "cnt_pretrain"
     model.config.pad_token_id = tokenizer.pad_token_id
 
     if args.use_peft:
@@ -139,8 +144,12 @@ def main(args):
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False, pad_to_multiple_of=8
     )
-
+    
     hub_name = f'{args.model_name.split("/")[-1].lower()}_{args.dataset_name.split("/")[-1].lower()}'
+    if args.ablation:
+        hub_name += "_ablation"
+    else:
+        hub_name += "_fourier"
     hub_name += "_peft" if args.use_peft else "_full"
     hub_name += "_" + datetime.now().strftime("%Y-%m-%d")
     hub_name = hub_name.replace("-", "_")
@@ -271,6 +280,11 @@ if __name__ == "__main__":
         "--resume_from_checkpoint",
         action="store_true",
         help="Whether to resume training from the latest checkpoint in output_dir.",
+    )
+    parser.add_argument(
+        "--ablate",
+        action="store_true",
+        help="Whether to ablate the model.",
     )
 
     # Add LoRA specific arguments
